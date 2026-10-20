@@ -57,6 +57,16 @@ Open <http://localhost:8000>.
 
 You can also just open `index.html` directly — it has no external references.
 
+## Develop
+
+There is no build step. To check that the page is still self-contained, offline-capable and deterministic:
+
+```bash
+node scripts/smoke.mjs
+```
+
+It fails the check if `index.html` ever gains a network reference, loses the hash→PRNG pipeline, drops a required element, or grows past the size budget.
+
 ## Controls
 
 | Input | Action |
