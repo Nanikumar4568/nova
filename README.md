@@ -2,6 +2,8 @@
 
 > **Every phrase ignites a star.**
 
+**[▶ nanikumar4568.github.io/nova](https://nanikumar4568.github.io/nova/)** — live, no install.
+
 Type any phrase and Nova ignites a star system from it — a specific star, at a specific temperature, with its own worlds, dust and light. The same words always produce the same star, on any device, forever.
 
 Deterministic generative astronomy in **one self-contained HTML file**. No build step, no dependencies, no network calls.
@@ -125,7 +127,7 @@ It fails the check if `index.html` ever gains a network reference, loses the has
 - [ ] Optional star names generated from the seed
 - [ ] Save a personal constellation to `localStorage`
 - [ ] Export the current sky as PNG
-- [ ] Deploy to GitHub Pages (needs a public repo on the free plan)
+- [x] ~~Deploy to GitHub Pages~~ — [live now](https://nanikumar4568.github.io/nova/)
 
 ## Licence
 
