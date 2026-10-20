@@ -24,7 +24,9 @@ ok(scripts.length === 1, `expected exactly 1 inline script, found ${scripts.leng
 ok(scripts.length > 0 && scripts[0][1].length > 8000, "inline script is suspiciously small");
 
 // 4. required DOM anchors
-for (const id of ["sky", "phrase", "forge", "readout", "roTitle", "roClass", "roTemp", "roMass", "roWorlds", "roSeed", "dice", "share", "toast"]) {
+const ids = ["sky", "phrase", "forge", "readout", "roTitle", "roClass", "roTemp", "roMass", "roWorlds", "roSeed", "dice", "share", "toast",
+  "save", "export", "skyBtn", "skyCount", "skyview", "skyCanvas", "skyName", "skyMeta", "skyClose", "skyShare", "skyClear", "skyEmpty"];
+for (const id of ids) {
   ok(html.includes(`id="${id}"`), `missing element #${id}`);
 }
 
@@ -33,9 +35,14 @@ ok(html.includes("fnv1a"), "missing FNV-1a hash");
 ok(html.includes("mulberry32"), "missing mulberry32 PRNG");
 ok(/CLASSES\s*=\s*\[/.test(html), "missing spectral class table");
 
+// 6. the sky must persist locally and stay shareable
+ok(html.includes("localStorage"), "missing localStorage persistence for the sky");
+ok(html.includes('"sky="') || html.includes("sky="), "missing #sky= share links");
+ok(html.includes("skyLayout"), "missing constellation layout");
+
 // 6. no accidental `Math.random()` in the star derivation path
 const randUses = (html.match(/Math\.random\(/g) || []).length;
-ok(randUses <= 2, `Math.random() used ${randUses} times — only the dice/labels may use it`);
+ok(randUses <= 2, `Math.random() used ${randUses} times — only the dice should use it`);
 
 // 7. size budget
 ok(bytes < 250_000, `index.html is ${bytes} bytes — over the 250 KB budget`);

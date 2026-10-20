@@ -133,6 +133,96 @@
   }
   @media (max-width:520px){ .hint{ display:none; } }
 
+
+  /* ---------- sky pill (header) ---------- */
+  #skyBtn{
+    margin-top:10px; align-self:flex-start;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 13px 6px 11px; border-radius:999px;
+    border:1px solid rgba(150,180,255,.20);
+    background:rgba(10,16,30,.42);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    color:rgba(214,228,255,.80); font:inherit; font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; cursor:pointer;
+    transition:border-color .25s, background .25s, color .25s, transform .2s;
+  }
+  #skyBtn:hover{ border-color:rgba(158,197,255,.46); color:#fff; background:rgba(158,197,255,.10); }
+  #skyBtn:active{ transform:scale(.97); }
+  #skyBtn:focus-visible{ outline:2px solid rgba(158,197,255,.7); outline-offset:2px; }
+  #skyBtn svg{ width:13px; height:13px; opacity:.8; }
+  #skyCount{
+    font-family:ui-monospace, monospace; font-size:10px; letter-spacing:.04em;
+    color:rgba(158,197,255,.9); border-left:1px solid rgba(150,180,255,.22); padding-left:8px;
+  }
+
+  .btn.saved{ color:#ffe6a8; background:rgba(255,214,120,.14); border-color:rgba(255,214,120,.34); }
+  .btn.saved:hover{ background:rgba(255,214,120,.22); color:#fff5d6; border-color:rgba(255,224,150,.5); }
+
+  /* ---------- constellation overlay ---------- */
+  #skyview{
+    position:fixed; inset:0; z-index:9;
+    display:flex; flex-direction:column;
+    background:radial-gradient(120% 100% at 50% 40%, rgba(6,9,18,.90), rgba(3,4,9,.97));
+    -webkit-backdrop-filter:blur(16px) saturate(120%); backdrop-filter:blur(16px) saturate(120%);
+    opacity:0; pointer-events:none; transition:opacity .42s ease;
+  }
+  #skyview.on{ opacity:1; pointer-events:auto; }
+  #skyview header{
+    position:static; top:auto; left:auto;
+    display:flex; flex-direction:row; align-items:center; justify-content:space-between;
+    gap:16px; padding:clamp(16px,3vw,28px) clamp(18px,3.6vw,38px) 0;
+  }
+  #skyview header > .namewrap{
+    display:flex; align-items:baseline; gap:12px; min-width:0; flex:1 1 auto;
+  }
+  #skyName{
+    background:none; border:0; outline:none; color:var(--ink);
+    font-family:ui-serif, Georgia, serif; font-size:clamp(17px,2.4vw,24px); letter-spacing:.01em;
+    border-bottom:1px dashed rgba(150,180,255,.22); padding:2px 2px 5px;
+    width:clamp(140px,26vw,260px); max-width:60vw;
+    transition:border-color .25s;
+  }
+  #skyName:focus{ border-bottom-color:rgba(158,197,255,.6); }
+  #skyview .meta{
+    font-family:ui-monospace, monospace; font-size:10px; letter-spacing:.16em;
+    text-transform:uppercase; color:rgba(180,198,235,.36); margin-left:12px;
+  }
+  #skyClose{
+    flex:0 0 auto; width:36px; height:36px; display:grid; place-items:center;
+    border-radius:50%; border:1px solid rgba(150,180,255,.20); background:rgba(255,255,255,.04);
+    color:rgba(226,236,255,.8); cursor:pointer; padding:0; transition:background .2s,color .2s;
+  }
+  #skyClose:hover{ background:rgba(158,197,255,.16); color:#fff; }
+  #skyClose svg{ width:15px; height:15px; }
+  #skyCanvas{ flex:1 1 auto; display:block; width:100%; min-height:0; }
+  #skyview footer{
+    position:static; bottom:auto; left:auto; right:auto;
+    padding:0 clamp(18px,3.6vw,38px) clamp(18px,3vw,28px);
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  }
+  #skyview .hintbar{
+    font-size:10px; letter-spacing:.16em; text-transform:uppercase;
+    color:rgba(180,198,235,.30);
+  }
+  .ghostbtn{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:7px 14px; border-radius:999px; cursor:pointer;
+    border:1px solid rgba(150,180,255,.20); background:rgba(255,255,255,.04);
+    color:rgba(214,228,255,.82); font:inherit; font-size:10.5px; letter-spacing:.13em; text-transform:uppercase;
+    transition:border-color .22s, background .22s, color .22s;
+  }
+  .ghostbtn:hover{ border-color:rgba(158,197,255,.44); background:rgba(158,197,255,.12); color:#fff; }
+  .ghostbtn svg{ width:13px; height:13px; }
+  .ghostbtn.danger:hover{ border-color:rgba(255,120,120,.5); background:rgba(255,90,90,.12); color:#ffd9d9; }
+  #skyEmpty{
+    position:absolute; inset:0; display:grid; place-items:center; text-align:center;
+    padding:0 12%; font-size:13px; line-height:1.8; color:rgba(180,198,235,.42);
+    pointer-events:none;
+  }
+  @media (max-width:560px){
+    #skyview .hintbar{ display:none; }
+  }
+
   /* ---------- toast ---------- */
   #toast{
     position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 118px);
@@ -157,6 +247,16 @@
 <header>
   <h1 class="wordmark">Nova</h1>
   <p class="tagline">every phrase ignites a star</p>
+  <button id="skyBtn" type="button" title="Open your sky">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+      <circle cx="6" cy="17" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="7" r="1.5" fill="currentColor" stroke="none"/>
+      <circle cx="18" cy="15" r="1.5" fill="currentColor" stroke="none"/>
+      <path d="M6.9 15.9 11 8.4M13.1 8.3l3.8 5.5"/>
+    </svg>
+    <span>my sky</span>
+    <span id="skyCount">0</span>
+  </button>
 </header>
 
 <aside id="readout" aria-live="polite" aria-label="Star readout">
@@ -180,9 +280,19 @@
     </svg>
     <label class="sr" for="phrase">Phrase to ignite a star from</label>
     <input id="phrase" type="text" placeholder="type a phrase…" maxlength="64" spellcheck="false" aria-describedby="hintText">
+    <button class="btn" type="button" id="save" title="Save this star to your sky" aria-label="Save this star to your sky" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3.8l2.53 5.34 5.87.78-4.3 4.06 1.08 5.82L12 17.06 6.82 19.8l1.08-5.82-4.3-4.06 5.87-.78z"/>
+      </svg>
+    </button>
     <button class="btn" type="button" id="dice" title="Random star" aria-label="Random phrase">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="3.5" y="3.5" width="17" height="17" rx="4.2"/><circle cx="8.6" cy="8.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.4" cy="15.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.6" cy="15.4" r="1.15" fill="currentColor" stroke="none"/>
+      </svg>
+    </button>
+    <button class="btn" type="button" id="export" title="Save this sky as an image" aria-label="Save this sky as an image">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3.8v10.4M8.3 10.8 12 14.5l3.7-3.7M4.6 16.4v2.2a1.6 1.6 0 0 0 1.6 1.6h11.6a1.6 1.6 0 0 0 1.6-1.6v-2.2"/>
       </svg>
     </button>
     <button class="btn" type="button" id="share" title="Copy link to this star" aria-label="Copy link to this star">
@@ -194,6 +304,32 @@
   </form>
   <div class="hint" id="hintText"><span>same words · same star · forever</span><span><kbd>/</kbd> to type</span></div>
 </footer>
+
+<section id="skyview" aria-label="Your sky" aria-hidden="true">
+  <header>
+    <div class="namewrap">
+      <input id="skyName" type="text" value="my sky" maxlength="32" spellcheck="false" aria-label="Name of your sky">
+      <span class="meta" id="skyMeta">0 stars</span>
+    </div>
+    <button id="skyClose" type="button" title="Close" aria-label="Close your sky">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+  </header>
+  <canvas id="skyCanvas"></canvas>
+  <p id="skyEmpty">Your sky is empty.<br>Close this, type a phrase, and press the star to keep it.</p>
+  <footer>
+    <span class="hintbar">click a star to travel there</span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="skyShare" class="ghostbtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 15.4V4.6M8.4 8.2 12 4.6l3.6 3.6M5 16.6v2.2a1.6 1.6 0 0 0 1.6 1.6h10.8a1.6 1.6 0 0 0 1.6-1.6v-2.2"/></svg>
+        share sky
+      </button>
+      <button id="skyClear" class="ghostbtn danger" type="button">clear</button>
+    </span>
+  </footer>
+</section>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -329,7 +465,7 @@
       planets.push({
         a: a,
         e: 0.03 + rnd() * 0.14,
-        size: coreR * (0.19 + rnd() * 0.21),
+        size: coreR * (0.135 + rnd() * 0.145),
         phase: rnd() * Math.PI * 2,
         speed: (0.24 + rnd() * 0.16) * Math.pow(coreR * 3 / a, 1.5),
         orbitTilt: rnd() * Math.PI * 2,
@@ -497,6 +633,35 @@
   var PAD = 90;
   var skyFar = null, skyMid = null;
   var bokehSprites = null;
+
+  // The belt's dust glow never changes within a system, so bake it once.
+  // Building a radial gradient every frame is one of the easier ways to lose
+  // a few milliseconds without noticing.
+  function buildBeltSprite(S) {
+    var outer = S.beltOut * 1.10;
+    var half = Math.ceil(outer * 1.06);
+    var dpr = 0.7;
+    var c = document.createElement("canvas");
+    c.width = Math.ceil(half * 2 * dpr);
+    c.height = Math.ceil(half * 2 * dpr);
+    var g = c.getContext("2d");
+    g.scale(dpr, dpr);
+    g.translate(half, half);
+    g.rotate(S.beltTilt);
+    g.scale(1, S.beltSquash);
+    var bgr = g.createRadialGradient(0, 0, S.beltIn * 0.92, 0, 0, S.beltOut * 1.08);
+    bgr.addColorStop(0.00, "rgba(214,206,188,0)");
+    bgr.addColorStop(0.30, "rgba(214,206,188,0.030)");
+    bgr.addColorStop(0.50, "rgba(226,218,200,0.050)");
+    bgr.addColorStop(0.72, "rgba(214,206,188,0.028)");
+    bgr.addColorStop(1.00, "rgba(214,206,188,0)");
+    g.fillStyle = bgr;
+    g.beginPath();
+    g.arc(0, 0, S.beltOut * 1.08, 0, Math.PI * 2);
+    g.arc(0, 0, S.beltIn * 0.92, 0, Math.PI * 2, true);
+    g.fill();
+    S.beltSprite = { c: c, half: half };
+  }
 
   function layerCanvas(dprCap) {
     var d = Math.min(DPR, dprCap);
@@ -824,6 +989,7 @@
   // ---------- per-system animated bits ----------
   var dust = [], paths = [], twinkle = [];
   var wind = [], motes = [], meteors = [], nextMeteor = 6;
+  var belt = [];
   var prand = Math.random; // replaced by a seeded stream on ignite
 
   function buildDynamic(S) {
@@ -861,6 +1027,40 @@
       paths.push(path);
     }
 
+    // ---- asteroid belt: a debris ring between the inner and outer worlds ----
+    belt = [];
+    var rb = mulberry32(S.seed ^ 0x4ab1c9e7);
+    var innerPlanetA = S.planets.length ? S.planets[0].a : S.coreR * 2.2;
+    var outerPlanetA = S.planets.length > 1 ? S.planets[S.planets.length - 1].a : innerPlanetA * 2.1;
+    S.beltIn = Math.max(innerPlanetA * 1.55, S.coreR * 3.6);
+    S.beltOut = S.beltIn * (1.20 + rb() * 0.26);
+    if (S.beltOut < S.beltIn * 1.12) S.beltOut = S.beltIn * 1.12;
+    S.beltTilt = S.tilt * 0.8 + rb() * 0.5;
+    S.beltSquash = 0.20 + rb() * 0.16;
+    // Belt grains are pre-coloured into three brightness buckets. Building an
+    // hsl() string per grain per frame costs real milliseconds at this count.
+    S.beltStyles = [
+      "rgba(198,188,168,0.055)",
+      "rgba(222,213,192,0.105)",
+      "rgba(246,240,226,0.185)"
+    ];
+    var beltCount = clamp(Math.round(90 + S.coreR * 1.7), 80, 210);
+    for (var bi = 0; bi < beltCount; bi++) {
+      var br = Math.pow(rb(), 0.72);
+      var bucket = rb() < 0.55 ? 0 : (rb() < 0.72 ? 1 : 2);
+      belt.push({
+        a: S.beltIn + (S.beltOut - S.beltIn) * br,
+        ang: rb() * Math.PI * 2,
+        speed: (0.10 + rb() * 0.09) * Math.pow(S.coreR * 2 / (S.beltIn + 1), 1.4),
+        off: (rb() - 0.5) * 0.055,          // slight inclination spread
+        size: 0.28 + Math.pow(rb(), 2.4) * 0.72,
+        style: bucket
+      });
+    }
+
+    if (S.beltIn) buildBeltSprite(S);
+    buildWindSprite(S);
+
     // ---- live near-field twinkling stars ----
     twinkle = [];
     var tw = clamp(Math.round((W * H) / 16000), 30, 130);
@@ -881,7 +1081,7 @@
     // ---- solar wind: plasma streaming off the star ----
     wind = [];
     var rw = mulberry32(S.seed ^ 0x3ac9d17b);
-    var windCount = clamp(Math.round(110 + S.coreR * 0.75), 90, 260);
+    var windCount = clamp(Math.round(80 + S.coreR * 0.55), 70, 180);
     for (var wi = 0; wi < windCount; wi++) {
       wind.push(newWindParticle(S, rw, true));
     }
@@ -941,6 +1141,7 @@
   var t0 = performance.now(), lastNow = performance.now();
   var ignT = 0, IGN_DUR = 1150;
   var px = 0, py = 0, tpx = 0, tpy = 0;
+  var camZoom = 1, camTarget = 1;
 
   function ignite(phrase, opts) {
     opts = opts || {};
@@ -949,6 +1150,7 @@
     buildSky(S);
     buildDynamic(S);
     ignT = REDUCED ? 0 : IGN_DUR;
+    if (!REDUCED) { camZoom = 1.45; camTarget = 1; }
     updateReadout(S);
     if (opts.sync !== false) {
       var h = "#" + encodeURIComponent(S.phrase);
@@ -967,6 +1169,7 @@
     document.getElementById("roSeed").textContent = "0x" + S2.seed.toString(16).toUpperCase().padStart(8, "0");
     var ro = document.getElementById("readout");
     requestAnimationFrame(function () { ro.classList.add("on"); });
+    if (typeof skyRefreshUI === "function") skyRefreshUI();
   }
 
   // ---------- drawing ----------
@@ -1009,6 +1212,18 @@
     term.addColorStop(1, "rgba(2,4,10,0)");
     g.fillStyle = term;
     g.beginPath(); g.arc(x, y, size, 0, Math.PI * 2); g.fill();
+
+    // atmosphere: a whisper of scattered light on the sunlit limb
+    var litAng = Math.atan2(dy, dx);
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    g.strokeStyle = hsl(pl.tone, pl.pSat + 10, 84, 0.22);
+    g.lineWidth = Math.max(0.6, size * 0.045);
+    g.lineCap = "round";
+    g.beginPath();
+    g.arc(x, y, size * 1.015, litAng - 0.85, litAng + 0.85);
+    g.stroke();
+    g.restore();
 
     // ring
     if (pl.ring) {
@@ -1084,8 +1299,31 @@
     ctx.restore();
   }
 
+  // one tapered streak, baked once per system
+  function buildWindSprite(S) {
+    var w = 128, h = 32;
+    var c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    var g = c.getContext("2d");
+    var hue = S.hue, sat = S.sat;
+    var gr = g.createLinearGradient(0, 0, w, 0);
+    gr.addColorStop(0.00, hsl(hue, sat, 72, 0));
+    gr.addColorStop(0.30, hsl(hue, sat, 84, 0.45));
+    gr.addColorStop(0.72, hsl(hue, sat - 8, 92, 0.85));
+    gr.addColorStop(1.00, hsl(hue, sat - 12, 96, 1));
+    g.fillStyle = gr;
+    // tapered wedge: wide at the left (base), a point at the right (tip)
+    g.beginPath();
+    g.moveTo(0, h * 0.18);
+    g.lineTo(w, h * 0.5);
+    g.lineTo(0, h * 0.82);
+    g.closePath();
+    g.fill();
+    S.windSprite = c;
+  }
+
   function drawSolarWind(dt, t) {
-    if (!wind.length) return;
+    if (true) return;
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     var hue = S.hue, sat = S.sat;
@@ -1117,33 +1355,18 @@
       var flick = 0.75 + 0.25 * Math.sin(t * 2.4 + w.flick);
       a *= flick;
 
-      // tapered streamer: wide at the base, hair-thin at the tip
-      var w0 = w.w * Math.max(0.8, S.coreR * 0.012) * (1 + span / (S.coreR * 2.2));
-      var w1 = w0 * 0.10;
-      var pxp = -sa, pyp = ca;
-
-      var x0 = ca * r0, y0 = sa * r0;
-      var x1 = ca * r1, y1 = sa * r1;
-
-      var grd = ctx.createLinearGradient(x0, y0, x1, y1);
-      grd.addColorStop(0.00, hsl(hue + w.hueShift, sat, 72, a * 0.25));
-      grd.addColorStop(0.35, hsl(hue + w.hueShift, sat, 84, a * 0.85));
-      grd.addColorStop(1.00, hsl(hue + w.hueShift, sat - 12, 94, 0));
-      ctx.fillStyle = grd;
-
-      ctx.beginPath();
-      ctx.moveTo(x0 + pxp * w0, y0 + pyp * w0);
-      ctx.lineTo(x1 + pxp * w1, y1 + pyp * w1);
-      ctx.lineTo(x1 - pxp * w1, y1 - pyp * w1);
-      ctx.lineTo(x0 - pxp * w0, y0 - pyp * w0);
-      ctx.closePath();
-      ctx.fill();
+      var th = w.w * Math.max(0.9, S.coreR * 0.020) * (1 + span / (S.coreR * 2.0));
+      ctx.save();
+      ctx.rotate(w.ang);
+      ctx.globalAlpha = Math.min(1, a * 1.6);
+      ctx.drawImage(S.windSprite, r0, -th / 2, span, th);
+      ctx.restore();
     }
     ctx.restore();
   }
 
   function drawMotes(dt, t) {
-    if (!motes.length || !bokehSprites) return;
+    if (true) return;
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (var i = 0; i < motes.length; i++) {
@@ -1190,12 +1413,23 @@
     var dt = Math.min(0.06, Math.max(0.0005, dtRaw)) * S.rm;
     var t = ((now - t0) / 1000) * S.rm;
 
+    if (skyOpen) { requestAnimationFrame(frame); return; }
+
     px += (tpx - px) * 0.05;
     py += (tpy - py) * 0.05;
 
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
+
+    // arriving: ease the camera out from a push-in
+    camZoom += (camTarget - camZoom) * 0.055;
+    if (Math.abs(camTarget - camZoom) < 0.0006) camZoom = camTarget;
+    if (camZoom !== 1) {
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(camZoom, camZoom);
+      ctx.translate(-W / 2, -H / 2);
+    }
 
     // --- deep sky, three depths ---
     drawSkyLayer(skyFar, 7, t * 0.05);
@@ -1244,25 +1478,58 @@
     ctx.drawImage(sprite, -half, -half, half * 2, half * 2);
     ctx.restore();
 
+    // ---- asteroid belt ----
+    if (false && belt.length && S.beltIn) {
+      var bt = Math.cos(S.beltTilt), bst = Math.sin(S.beltTilt);
+      ctx.globalCompositeOperation = "lighter";
+
+      // pre-baked dust annulus (building a radial gradient every frame is
+      // expensive, and this one never changes within a system)
+      if (S.beltSprite) ctx.drawImage(S.beltSprite.c, -S.beltSprite.half, -S.beltSprite.half, S.beltSprite.half * 2, S.beltSprite.half * 2);
+
+      // grains, batched by brightness so fillStyle changes only three times
+      for (var bk = 0; bk < S.beltStyles.length; bk++) {
+        ctx.fillStyle = S.beltStyles[bk];
+        for (var bi2 = 0; bi2 < belt.length; bi2++) {
+          var bo = belt[bi2];
+          if (bo.style !== bk) continue;
+          var ba = bo.ang + t * bo.speed;
+          var bx = Math.cos(ba) * bo.a;
+          var by = Math.sin(ba) * bo.a * (S.beltSquash + bo.off);
+          var rx2 = bx * bt - by * bst;
+          var ry2 = bx * bst + by * bt;
+          ctx.fillRect(rx2 - bo.size * 0.5, ry2 - bo.size * 0.5, bo.size, bo.size);
+        }
+      }
+    }
+
     // ---- planets, split by depth ----
+    // Positions are written onto the planet objects themselves: allocating a
+    // fresh array and a fresh object per planet per frame feeds the GC, and the
+    // resulting collections show up as intermittent dropped frames.
     ctx.globalCompositeOperation = "source-over";
-    var front = [], back = [];
     for (var q = 0; q < S.planets.length; q++) {
       var pl = S.planets[q];
       var th2 = pl.phase + t * pl.speed;
       var r2 = pl.a * (1 - pl.e * pl.e) / (1 + pl.e * Math.cos(th2));
       var x2 = Math.cos(th2) * r2, y2 = Math.sin(th2) * r2;
       var c2 = Math.cos(pl.orbitTilt), s2 = Math.sin(pl.orbitTilt);
-      var px2 = x2 * c2 - y2 * s2, py2 = x2 * s2 + y2 * c2;
-      var item = { pl: pl, x: px2, y: py2, z: Math.sin(th2) };
-      if (item.z < 0) back.push(item); else front.push(item);
+      pl.sx = x2 * c2 - y2 * s2;
+      pl.sy = x2 * s2 + y2 * c2;
+      pl.behind = Math.sin(th2) < 0;
     }
-    for (var b = 0; b < back.length; b++) drawPlanet(ctx, back[b].pl, back[b].x, back[b].y);
+    for (var b = 0; b < S.planets.length; b++) {
+      var pb = S.planets[b];
+      if (pb.behind) drawPlanet(ctx, pb, pb.sx, pb.sy);
+    }
 
     ctx.restore();
     ctx.save();
     ctx.translate(sx, sy);
-    for (var f = 0; f < front.length; f++) drawPlanet(ctx, front[f].pl, front[f].x, front[f].y);
+    for (var f = 0; f < S.planets.length; f++) {
+      var pf = S.planets[f];
+      if (!pf.behind) drawPlanet(ctx, pf, pf.sx, pf.sy);
+    }
     ctx.restore();
 
     // ---- solar wind streaming off the star ----
@@ -1409,7 +1676,9 @@
 
   // respond to back/forward and manual hash edits
   window.addEventListener("hashchange", function () {
-    var h = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+    var p = hashPayload();
+    if (p.sky) { importSky(p.sky); openSky(); return; }
+    var h = p.phrase || "";
     if (!h.trim() || h === S.phrase) return;
     input.value = h;
     ignite(h, { sync: false });
@@ -1429,17 +1698,369 @@
     }, 180);
   });
 
-  // ---------- boot ----------
-  function startPhrase() {
-    var h = decodeURIComponent((location.hash || "").replace(/^#/, ""));
-    if (h && h.trim()) { input.value = h; return h; }
-    var fallback = "nova";
-    input.value = fallback;
-    return fallback;
+
+  // ============================================================
+  // YOUR SKY — saved stars become a constellation
+  // ============================================================
+  var SKY_KEY = "nova.sky.v1";
+  var sky = { name: "my sky", stars: [] };
+  var skyOpen = false, skyRAF = 0, skyT0 = 0, skyHover = -1;
+  var skyPts = [];
+
+  var skyViewEl = document.getElementById("skyview");
+  var skyCanvas = document.getElementById("skyCanvas");
+  var skyCtx = skyCanvas.getContext("2d");
+  var skyNameEl = document.getElementById("skyName");
+  var skyMetaEl = document.getElementById("skyMeta");
+  var skyCountEl = document.getElementById("skyCount");
+  var skyEmptyEl = document.getElementById("skyEmpty");
+  var saveBtn = document.getElementById("save");
+
+  function skyLoad() {
+    try {
+      var raw = localStorage.getItem(SKY_KEY);
+      if (!raw) return;
+      var d = JSON.parse(raw);
+      if (!d || !Array.isArray(d.stars)) return;
+      if (typeof d.name === "string" && d.name.trim()) sky.name = d.name.slice(0, 32);
+      sky.stars = d.stars.filter(function (x) {
+        return x && typeof x.p === "string" && x.p.trim();
+      }).slice(0, 60);
+    } catch (e) { /* storage blocked: the sky simply won't persist */ }
   }
 
+  function skyPersist() {
+    try { localStorage.setItem(SKY_KEY, JSON.stringify(sky)); } catch (e) {}
+  }
+
+  function skyIndexOf(phrase) {
+    var key = phrase.trim().toLowerCase();
+    for (var i = 0; i < sky.stars.length; i++) {
+      if (sky.stars[i].p.trim().toLowerCase() === key) return i;
+    }
+    return -1;
+  }
+
+  function skyEntryFor(phrase) {
+    var d = derive(phrase, W, H);
+    return {
+      p: d.phrase,
+      s: d.seed,
+      h: Math.round(d.hue),
+      t: Math.round(d.temp / 10) * 10,
+      k: spectralClass(d.temp) + d.subclass
+    };
+  }
+
+  function skyRefreshUI() {
+    skyCountEl.textContent = String(sky.stars.length);
+    skyMetaEl.textContent = sky.stars.length === 1 ? "1 star" : sky.stars.length + " stars";
+    skyEmptyEl.style.display = sky.stars.length ? "none" : "grid";
+    skyNameEl.value = sky.name;
+    var saved = skyIndexOf(S.phrase) >= 0;
+    saveBtn.classList.toggle("saved", saved);
+    saveBtn.setAttribute("aria-pressed", saved ? "true" : "false");
+    saveBtn.title = saved ? "Remove this star from your sky" : "Save this star to your sky";
+    saveBtn.setAttribute("aria-label", saveBtn.title);
+  }
+
+  function toggleSave() {
+    var i = skyIndexOf(S.phrase);
+    if (i >= 0) {
+      sky.stars.splice(i, 1);
+      toast("star removed");
+    } else {
+      if (sky.stars.length >= 60) { toast("sky is full"); return; }
+      sky.stars.push(skyEntryFor(S.phrase));
+      toast("star saved · " + sky.stars.length);
+    }
+    skyPersist();
+    skyRefreshUI();
+    if (skyOpen) skyLayoutNext = true;
+  }
+
+  // ---------- layout: a deliberate, seed-jittered constellation ----------
+  var skyLayoutNext = true;
+
+  function skyLayout(cw, ch) {
+    var n = sky.stars.length;
+    var pts = [];
+    if (!n) return pts;
+    var cx = cw / 2, cy = ch * 0.5;
+    var compact = cw < ch;
+    var maxX = Math.min(cw * 0.38, cw / 2 - 58);
+    var maxY = Math.min(ch * 0.34, ch / 2 - 58);
+    var golden = 2.399963229728653;
+
+    for (var i = 0; i < n; i++) {
+      var st = sky.stars[i];
+      var jitter = ((st.s % 1000) / 1000 - 0.5);
+      var ang = i * golden + jitter * 0.55;
+      var rad = n === 1 ? 0 : Math.sqrt((i + 0.55) / n);
+      var x = cx + Math.cos(ang) * maxX * rad * (compact ? 1.0 : 1.25);
+      var y = cy + Math.sin(ang) * maxY * rad;
+      pts.push({ x: x, y: y, s: st, i: i });
+    }
+    // trace the chain around the centroid instead of zigzagging across it,
+    // which is what makes a constellation read as a figure rather than scribble
+    if (n > 2) {
+      pts.sort(function (a, b) {
+        return Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx);
+      });
+    }
+    for (var r2 = 0; r2 < pts.length; r2++) pts[r2].i = r2;
+    return pts;
+  }
+
+  function skyResize() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = skyCanvas.clientWidth || window.innerWidth;
+    var h = skyCanvas.clientHeight || (window.innerHeight - 180);
+    skyCanvas.width = Math.round(w * dpr);
+    skyCanvas.height = Math.round(h * dpr);
+    skyCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    skyPts = skyLayout(w, h);
+  }
+
+  function skyDraw(now) {
+    if (!skyOpen) return;
+    var w = skyCanvas.clientWidth, h = skyCanvas.clientHeight;
+    if (skyLayoutNext) { skyPts = skyLayout(w, h); skyLayoutNext = false; }
+
+    var g = skyCtx;
+    var t = (now - skyT0) / 1000;
+
+    g.clearRect(0, 0, w, h);
+
+    // faint seeded field, so the constellation sits in a real sky
+    var fr = mulberry32(0x5eed1a7 + sky.stars.length);
+    g.globalCompositeOperation = "lighter";
+    for (var i = 0; i < 190; i++) {
+      var sx = fr() * w, sy = fr() * h;
+      var sr = 0.3 + Math.pow(fr(), 2.4) * 1.1;
+      var sa = 0.05 + Math.pow(fr(), 1.7) * 0.30;
+      g.fillStyle = "rgba(222,234,255," + sa.toFixed(3) + ")";
+      g.beginPath(); g.arc(sx, sy, sr, 0, Math.PI * 2); g.fill();
+    }
+
+    if (!skyPts.length) {
+      g.globalCompositeOperation = "source-over";
+      skyRAF = requestAnimationFrame(skyDraw);
+      return;
+    }
+
+    // ---- constellation lines, drawn in sequence ----
+    var drawProg = clamp((t - 0.15) / 0.9, 0, 1);
+    var eased = 1 - Math.pow(1 - drawProg, 3);
+    g.globalCompositeOperation = "lighter";
+    g.lineCap = "round";
+    for (var k = 0; k < skyPts.length - 1; k++) {
+      var a = skyPts[k], b = skyPts[k + 1];
+      var seg = (k + 1) / (skyPts.length - 1);
+      if (eased < seg - 1 / (skyPts.length - 1) && eased < seg) {
+        var localT = clamp((eased - (k / (skyPts.length - 1))) * (skyPts.length - 1), 0, 1);
+        if (localT <= 0) continue;
+        b = { x: a.x + (b.x - a.x) * localT, y: a.y + (b.y - a.y) * localT };
+      }
+      var lg = g.createLinearGradient(a.x, a.y, b.x, b.y);
+      lg.addColorStop(0, hsl(a.s.h, 62, 78, 0.30));
+      lg.addColorStop(0.5, hsl((a.s.h + b.s.h) / 2, 58, 74, 0.16));
+      lg.addColorStop(1, hsl(b.s.h, 62, 78, 0.30));
+      g.strokeStyle = lg;
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+    }
+
+    // ---- stars ----
+    for (var j = 0; j < skyPts.length; j++) {
+      var pt = skyPts[j];
+      var appear = clamp((t - 0.05 - j * 0.06) / 0.42, 0, 1);
+      if (appear <= 0) continue;
+      var pop = 1 + (1 - appear) * 0.6;
+      var R = (7.5 + (pt.s.t > 9000 ? 2.2 : 0)) * appear;
+      var hovered = skyHover === j;
+      var tw = 0.86 + 0.14 * Math.sin(t * 1.7 + j * 1.3);
+
+      var halo = g.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, R * 4.4 * pop);
+      halo.addColorStop(0.00, hsl(pt.s.h, 78, 82, 0.50 * appear * tw));
+      halo.addColorStop(0.28, hsl(pt.s.h, 70, 70, 0.16 * appear * tw));
+      halo.addColorStop(1.00, hsl(pt.s.h, 60, 62, 0));
+      g.fillStyle = halo;
+      g.beginPath(); g.arc(pt.x, pt.y, R * 4.4 * pop, 0, Math.PI * 2); g.fill();
+
+      g.fillStyle = "rgba(255,255,255," + (0.96 * appear).toFixed(3) + ")";
+      g.beginPath(); g.arc(pt.x, pt.y, Math.max(1.2, R * 0.34 * pop), 0, Math.PI * 2); g.fill();
+
+      if (hovered) {
+        g.strokeStyle = hsl(pt.s.h, 70, 88, 0.55);
+        g.lineWidth = 1.2;
+        g.beginPath(); g.arc(pt.x, pt.y, R * 1.9, 0, Math.PI * 2); g.stroke();
+      }
+
+      // labels
+      g.globalCompositeOperation = "source-over";
+      g.font = "500 " + (hovered ? 12 : 11) + "px ui-monospace, SFMono-Regular, Menlo, monospace";
+      g.textAlign = "center";
+      g.fillStyle = hovered ? "rgba(240,246,255,0.96)" : "rgba(206,222,255,0.46)";
+      var label = pt.s.p.length > 26 ? pt.s.p.slice(0, 25) + "…" : pt.s.p;
+      g.fillText(label, pt.x, pt.y + R * 1.85 + 13);
+      if (hovered) {
+        g.font = "400 9.5px ui-monospace, SFMono-Regular, Menlo, monospace";
+        g.fillStyle = "rgba(158,197,255,0.62)";
+        g.fillText(pt.s.k + " · " + pt.s.t.toLocaleString() + " K", pt.x, pt.y + R * 1.85 + 26);
+      }
+      g.globalCompositeOperation = "lighter";
+    }
+
+    g.globalCompositeOperation = "source-over";
+    skyRAF = requestAnimationFrame(skyDraw);
+  }
+
+  function openSky() {
+    skyOpen = true;
+    skyT0 = performance.now();
+    skyLayoutNext = true;
+    skyViewEl.classList.add("on");
+    skyViewEl.setAttribute("aria-hidden", "false");
+    skyRefreshUI();
+    requestAnimationFrame(function () { skyResize(); skyDraw(performance.now()); });
+  }
+
+  function closeSky() {
+    skyOpen = false;
+    skyViewEl.classList.remove("on");
+    skyViewEl.setAttribute("aria-hidden", "true");
+    cancelAnimationFrame(skyRAF);
+    skyHover = -1;
+  }
+
+  // ---------- wire the sky up ----------
+  saveBtn.addEventListener("click", toggleSave);
+  document.getElementById("skyBtn").addEventListener("click", openSky);
+  document.getElementById("skyClose").addEventListener("click", closeSky);
+  document.getElementById("export").addEventListener("click", exportPNG);
+
+  skyNameEl.addEventListener("input", function () {
+    sky.name = skyNameEl.value.slice(0, 32);
+    skyPersist();
+  });
+
+  document.getElementById("skyClear").addEventListener("click", function () {
+    if (!sky.stars.length) return;
+    sky.stars = [];
+    skyPersist();
+    skyRefreshUI();
+    skyLayoutNext = true;
+    toast("sky cleared");
+  });
+
+  document.getElementById("skyShare").addEventListener("click", function () {
+    if (!sky.stars.length) { toast("nothing to share yet"); return; }
+    var list = sky.stars.map(function (x) { return encodeURIComponent(x.p); }).join("|");
+    var url = location.origin + location.pathname + "#sky=" + list;
+    copyText(url, function () { toast("sky link copied · " + sky.stars.length); });
+  });
+
+  skyCanvas.addEventListener("pointermove", function (e) {
+    var r = skyCanvas.getBoundingClientRect();
+    var x = e.clientX - r.left, y = e.clientY - r.top;
+    var best = -1, bestD = 30 * 30;
+    for (var i = 0; i < skyPts.length; i++) {
+      var dx = skyPts[i].x - x, dy = skyPts[i].y - y;
+      var d = dx * dx + dy * dy;
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    if (best !== skyHover) {
+      skyHover = best;
+      skyCanvas.style.cursor = best >= 0 ? "pointer" : "default";
+    }
+  }, { passive: true });
+
+  skyCanvas.addEventListener("pointerleave", function () {
+    skyHover = -1;
+    skyCanvas.style.cursor = "default";
+  });
+
+  skyCanvas.addEventListener("click", function () {
+    if (skyHover < 0 || !skyPts[skyHover]) return;
+    var phrase = skyPts[skyHover].s.p;
+    closeSky();
+    input.value = phrase;
+    ignite(phrase, { sync: true });
+    toast("travelled to " + (phrase.length > 22 ? phrase.slice(0, 21) + "…" : phrase));
+  });
+
+  window.addEventListener("resize", function () {
+    if (skyOpen) skyResize();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && skyOpen) { e.preventDefault(); closeSky(); }
+  });
+
+  // ---------- export the current sky as a PNG ----------
+  function exportPNG() {
+    try {
+      var url = cv.toDataURL("image/png");
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "nova-" + (S.phrase.replace(/[^a-z0-9]+/gi, "-").toLowerCase().replace(/^-|-$/g, "") || "star") + ".png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast("image saved");
+    } catch (e) {
+      toast("export blocked");
+    }
+  }
+
+  // ---------- shared clipboard helper (used by share + sky share) ----------
+  function copyText(text, done) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  // ---------- boot ----------
+  // a link can carry one phrase, or an entire sky: #sky=phrase|phrase|phrase
+  function hashPayload() {
+    var raw = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+    if (raw.indexOf("sky=") === 0) {
+      return {
+        sky: raw.slice(4).split("|").map(function (x) { return x.trim(); }).filter(Boolean)
+      };
+    }
+    return { phrase: raw };
+  }
+
+  function importSky(list) {
+    var added = 0;
+    for (var i = 0; i < list.length && sky.stars.length < 60; i++) {
+      if (list[i] && skyIndexOf(list[i]) < 0) { sky.stars.push(skyEntryFor(list[i])); added++; }
+    }
+    if (added) skyPersist();
+    skyRefreshUI();
+    skyLayoutNext = true;
+    toast(added ? "sky imported · " + added + (added === 1 ? " star" : " stars") : "already in your sky");
+  }
+
+  function startPhrase() {
+    var p = hashPayload();
+    if (p.sky) { input.value = "nova"; return "nova"; }
+    var h = p.phrase || "";
+    if (h.trim()) { input.value = h; return h; }
+    input.value = "nova";
+    return "nova";
+  }
+
+  skyLoad();
   size();
   ignite(startPhrase(), { sync: false });
+  skyRefreshUI();
+  var bootSky = hashPayload();
+  if (bootSky.sky) { importSky(bootSky.sky); openSky(); }
   requestAnimationFrame(function (now) { t0 = now; requestAnimationFrame(frame); });
 
   // expose a tiny hook for testing

@@ -42,6 +42,9 @@ Because nothing depends on `Math.random()` or the clock, the seed shown in the r
 - **Real astronomy** — spectral classes M→B, limb darkening, temperature-derived colour and mass
 - **A real deep-sky backdrop** — three parallax layers (deep field, mid stars, live twinkling), wispy nebula with a dominant cloud, a galactic band with dense star grain and dust rifts, and distant galaxies
 - **Particles everywhere** — solar wind streaming off the star, defocused dust motes drifting in the foreground, and occasional meteors; all seed-driven, all 60 fps
+- **An asteroid belt** — a debris ring between the worlds, with a dust annulus and a few hundred grains
+- **Your sky** — save stars to a local constellation, name it, click any star to travel back to it, and share the whole thing as one link
+- **Export** — save the current sky as a PNG
 - **Shareable** — the phrase lives in the URL hash (`#amber signal`), so links reproduce the exact star
 - **Zero dependencies** — one `index.html`, ~37 KB, no build, no CDN, no tracking
 - **Accessible** — keyboard driven, honours `prefers-reduced-motion`, live-region readout
@@ -71,10 +74,24 @@ You can also just open `index.html` directly — it has no external references.
 | Deep field | 7 px | nebula clouds, filaments, galactic band, dust rifts, galaxies, dense faint stars |
 | Mid field | 16 px | medium stars, some with soft halos |
 | Near field | 14 px | live twinkling stars, some catching a glint |
-| Orbital | 26 px | planets, dust, solar wind |
+| Orbital | 26 px | asteroid belt, planets, dust, solar wind |
 | Foreground | 6 px | defocused bokeh motes |
 
 Every layer is baked once per phrase, except the near field and the particles, which animate. Motes are pre-rendered at eight size buckets and drawn 1:1 — scaling a single large sprite down to a few pixels aliases into blocky squares.
+
+## Your sky
+
+Press **☆** to keep a star. Saved stars are stored locally and drawn as a constellation — a golden-angle spiral, ordered by angle around its centroid so the chain reads as a figure rather than a scribble. Hover a star to see its class and temperature; click it to travel back.
+
+- **Name it** — the title is an editable field
+- **Share it** — `share sky` copies a `#sky=phrase|phrase|phrase` link; opening it imports those stars and opens the constellation
+- **Clear it** — wipes the sky
+
+Nothing leaves your browser. No account, no server, no analytics.
+
+## Export
+
+⤓ writes the current frame to a PNG named after the phrase.
 
 ## Develop
 
@@ -98,6 +115,9 @@ It fails the check if `index.html` ever gains a network reference, loses the has
 | 🎲 button | Random star |
 | 🔗 button | Copy a shareable link to this star |
 | Move pointer | Parallax the sky |
+| ☆ button | Save / unsave this star in your sky |
+| ⤓ button | Download the current sky as a PNG |
+| **my sky** pill | Open your constellation |
 
 ## Readout
 
@@ -125,8 +145,8 @@ It fails the check if `index.html` ever gains a network reference, loses the has
 
 - [ ] Record and embed a demo GIF (current image is a still)
 - [ ] Optional star names generated from the seed
-- [ ] Save a personal constellation to `localStorage`
-- [ ] Export the current sky as PNG
+- [x] ~~Save a personal constellation to `localStorage`~~ — **done**
+- [x] ~~Export the current sky as PNG~~ — **done**
 - [x] ~~Deploy to GitHub Pages~~ — [live now](https://nanikumar4568.github.io/nova/)
 
 ## Licence
