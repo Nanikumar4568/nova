@@ -30,17 +30,21 @@ A phrase is not "random" — it is *seeded*.
 3. **Classify** — a spectral class is sampled first (`M → K → G → F → A → B`), then a temperature is drawn log-uniformly inside that class's band, so you get genuine variety instead of a hundred lukewarm dots.
 4. **Render** — temperature and mass set the star's colour, size and luminosity. Limb darkening, corona rays, diffraction spikes and an anamorphic streak are pre-baked into an offscreen sprite once, then composited each frame.
 
+The sky around the star is seeded from the same hash, so a phrase reproduces not just the star but the whole scene — nebula, galactic band, galaxies, meteors and all.
+
 Because nothing depends on `Math.random()` or the clock, the seed shown in the readout *is* the star. Share the URL, share the star.
 
 ## Features
 
 - **Deterministic** — same phrase ⇒ same star, byte for byte
 - **Real astronomy** — spectral classes M→B, limb darkening, temperature-derived colour and mass
-- **Living systems** — orbiting worlds with terminator shading and rings, dust, corona, nebula and a galactic band
+- **A real deep-sky backdrop** — three parallax layers (deep field, mid stars, live twinkling), wispy nebula with a dominant cloud, a galactic band with dense star grain and dust rifts, and distant galaxies
+- **Particles everywhere** — solar wind streaming off the star, defocused dust motes drifting in the foreground, and occasional meteors; all seed-driven, all 60 fps
 - **Shareable** — the phrase lives in the URL hash (`#amber signal`), so links reproduce the exact star
 - **Zero dependencies** — one `index.html`, ~37 KB, no build, no CDN, no tracking
 - **Accessible** — keyboard driven, honours `prefers-reduced-motion`, live-region readout
-- **Responsive** — separate composition for portrait/mobile, `devicePixelRatio` aware
+- **Responsive** — portrait and landscape compose differently (the galactic band stays shallow on tall screens instead of smearing vertically), `devicePixelRatio` aware
+- **Fast** — steady 60 fps, ~16.7 ms frames, no per-frame allocation storms
 
 ## Run it
 
@@ -56,6 +60,19 @@ python3 -m http.server 8000
 Open <http://localhost:8000>.
 
 You can also just open `index.html` directly — it has no external references.
+
+
+## Anatomy of the sky
+
+| Layer | Parallax | Contents |
+| --- | --- | --- |
+| Deep field | 7 px | nebula clouds, filaments, galactic band, dust rifts, galaxies, dense faint stars |
+| Mid field | 16 px | medium stars, some with soft halos |
+| Near field | 14 px | live twinkling stars, some catching a glint |
+| Orbital | 26 px | planets, dust, solar wind |
+| Foreground | 6 px | defocused bokeh motes |
+
+Every layer is baked once per phrase, except the near field and the particles, which animate. Motes are pre-rendered at eight size buckets and drawn 1:1 — scaling a single large sprite down to a few pixels aliases into blocky squares.
 
 ## Develop
 
@@ -104,7 +121,7 @@ It fails the check if `index.html` ever gains a network reference, loses the has
 
 ## Roadmap
 
-- [ ] Record and embed a demo GIF
+- [ ] Record and embed a demo GIF (current image is a still)
 - [ ] Optional star names generated from the seed
 - [ ] Save a personal constellation to `localStorage`
 - [ ] Export the current sky as PNG

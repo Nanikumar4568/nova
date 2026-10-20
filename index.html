@@ -488,100 +488,358 @@
     spriteHalf = half;
   }
 
-  // ---------- background: distant stars + nebula (static, rebuilt per system) ----------
-  var bg = null, PAD = 90;
+  // ============================================================
+  // SKY  — three parallax layers, baked once per system
+  //   far  : nebula, dust lanes, galaxies, dense faint field
+  //   mid  : medium stars, some with flares
+  //   near : live twinkling stars (drawn per frame)
+  // ============================================================
+  var PAD = 90;
+  var skyFar = null, skyMid = null;
+  var bokehSprites = null;
 
-  function buildBackground(S) {
-    var dpr = DPR;
+  function layerCanvas(dprCap) {
+    var d = Math.min(DPR, dprCap);
     var c = document.createElement("canvas");
-    c.width = Math.ceil((W + PAD * 2) * dpr);
-    c.height = Math.ceil((H + PAD * 2) * dpr);
+    c.width = Math.ceil((W + PAD * 2) * d);
+    c.height = Math.ceil((H + PAD * 2) * d);
     var g = c.getContext("2d");
-    g.scale(dpr, dpr);
+    g.scale(d, d);
+    return { c: c, g: g, w: W + PAD * 2, h: H + PAD * 2 };
+  }
 
-    var bw = W + PAD * 2, bh = H + PAD * 2;
-    var rnd = mulberry32(S.seed ^ 0x5bf03635);
+  // realistic stellar colour mix: mostly white, few blue, few red
+  function starTint(r) {
+    if (r < 0.05) return [168, 198, 255];
+    if (r < 0.17) return [203, 221, 255];
+    if (r < 0.47) return [246, 249, 255];
+    if (r < 0.70) return [255, 246, 226];
+    if (r < 0.87) return [255, 226, 191];
+    return [255, 198, 162];
+  }
 
-    // deep base gradient
-    g.fillStyle = "#05060a";
-    g.fillRect(0, 0, bw, bh);
-    var base = g.createRadialGradient(CX + PAD, CY + PAD, 0, CX + PAD, CY + PAD, Math.max(bw, bh) * 0.78);
-    base.addColorStop(0, "rgba(12,18,36,1)");
-    base.addColorStop(0.55, "rgba(7,10,20,1)");
-    base.addColorStop(1, "rgba(4,5,9,1)");
-    g.fillStyle = base;
-    g.fillRect(0, 0, bw, bh);
+  function paintStars(g, bw, bh, rnd, count, minR, maxR, minA, maxA, weightBand, bandAng) {
+    for (var i = 0; i < count; i++) {
+      var x = rnd() * bw, y = rnd() * bh;
+      // concentrate part of the field along the galactic band
+      if (weightBand && rnd() < weightBand) {
+        var t2 = (rnd() - 0.5) * bh * 0.42;
+        var ca = Math.cos(bandAng), sa = Math.sin(bandAng);
+        x = bw * 0.5 + Math.cos(bandAng) * (rnd() - 0.5) * bw * 1.6 + ca * 0;
+        y = bh * 0.5 + sa * (rnd() - 0.5) * bw * 1.6 + t2 * ca;
+        x = ((x % bw) + bw) % bw;
+        y = ((y % bh) + bh) % bh;
+      }
+      var r = minR + Math.pow(rnd(), 2.6) * (maxR - minR);
+      var a = minA + Math.pow(rnd(), 1.8) * (maxA - minA);
+      var tint = starTint(rnd());
+      g.fillStyle = "rgba(" + tint[0] + "," + tint[1] + "," + tint[2] + "," + a.toFixed(3) + ")";
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+  }
 
-    // nebula clouds
+  function paintGalaxy(g, x, y, size, ang, rnd) {
+    g.save();
+    g.translate(x, y);
+    g.rotate(ang);
+    g.scale(1, 0.20 + rnd() * 0.28);
+    var gr = g.createRadialGradient(0, 0, 0, 0, 0, size);
+    gr.addColorStop(0.00, "rgba(255,251,242,0.40)");
+    gr.addColorStop(0.12, "rgba(236,231,238,0.13)");
+    gr.addColorStop(0.40, "rgba(190,203,240,0.035)");
+    gr.addColorStop(0.75, "rgba(160,180,228,0.015)");
+    gr.addColorStop(1.00, "rgba(150,170,220,0)");
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(0, 0, size, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "rgba(255,253,246,0.42)";
+    g.beginPath(); g.arc(0, 0, Math.max(0.7, size * 0.075), 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+
+  function paintNebula(g, bw, bh, S, rnd, scale, alphaScale) {
+    var minDim = Math.min(bw, bh);
     g.save();
     g.globalCompositeOperation = "lighter";
-    if ("filter" in g) g.filter = "blur(" + Math.round(46 * Math.min(1, Math.min(W, H) / 900)) + "px)";
-    for (var i = 0; i < S.nebula; i++) {
-      var nx = PAD + W * (0.12 + rnd() * 0.76);
-      var ny = PAD + H * (0.10 + rnd() * 0.8);
-      var nr = Math.min(W, H) * (0.16 + rnd() * 0.30);
-      var nh = S.hue + (rnd() * 80 - 40);
-      var na = 0.035 + rnd() * 0.06;
-      var ng = g.createRadialGradient(nx, ny, 0, nx, ny, nr);
-      ng.addColorStop(0, hsl(nh, S.sat * 0.7, 46, na));
-      ng.addColorStop(0.55, hsl(nh, S.sat * 0.6, 40, na * 0.42));
-      ng.addColorStop(1, hsl(nh, S.sat * 0.5, 38, 0));
-      g.fillStyle = ng;
-      g.beginPath(); g.arc(nx, ny, nr, 0, Math.PI * 2); g.fill();
+
+    // --- soft clouds, three hue families for depth ---
+    if ("filter" in g) g.filter = "blur(" + Math.round(minDim * 0.075) + "px)";
+    var families = [
+      S.hue,
+      S.hue + 150 + rnd() * 50,
+      S.hue - 40 + rnd() * 80
+    ];
+    var blobs = 3 + Math.floor(rnd() * 3);
+    for (var f = 0; f < families.length; f++) {
+      for (var i = 0; i < blobs; i++) {
+        var x = bw * (0.10 + rnd() * 0.80);
+        var y = bh * (0.08 + rnd() * 0.84);
+        var r = minDim * (0.12 + rnd() * 0.26) * scale;
+        var a = (0.040 + rnd() * 0.075) * alphaScale;
+        var hh = families[f] + (rnd() * 30 - 15);
+        var gr = g.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, hsl(hh, 74, 54, a));
+        gr.addColorStop(0.45, hsl(hh, 68, 46, a * 0.45));
+        gr.addColorStop(1, hsl(hh, 50, 40, 0));
+        g.fillStyle = gr;
+        g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      }
+    }
+    if ("filter" in g) g.filter = "none";
+
+    // --- one dominant nebula region, so the sky has a second focal point ---
+    if ("filter" in g) g.filter = "blur(" + Math.round(minDim * 0.030) + "px)";
+    var dx0 = (rnd() < 0.5 ? 0.18 : 0.82) * bw, dy0 = (0.20 + rnd() * 0.55) * bh;
+    var drad = minDim * (0.34 + rnd() * 0.16);
+    var dhue = S.hue + (rnd() < 0.5 ? 165 : -55);
+    for (var dk = 0; dk < 7; dk++) {
+      var ox2 = dx0 + (rnd() - 0.5) * drad * 1.1;
+      var oy2 = dy0 + (rnd() - 0.5) * drad * 0.9;
+      var or2 = drad * (0.30 + rnd() * 0.55);
+      var og = g.createRadialGradient(ox2, oy2, 0, ox2, oy2, or2);
+      og.addColorStop(0, hsl(dhue + rnd() * 26 - 13, 68, 52, 0.070 * alphaScale));
+      og.addColorStop(0.5, hsl(dhue + rnd() * 26 - 13, 62, 46, 0.028 * alphaScale));
+      og.addColorStop(1, hsl(dhue, 56, 42, 0));
+      g.fillStyle = og;
+      g.beginPath(); g.arc(ox2, oy2, or2, 0, Math.PI * 2); g.fill();
+    }
+    if ("filter" in g) g.filter = "none";
+
+    // --- wispy filaments: what actually makes a nebula read as a nebula ---
+    if ("filter" in g) g.filter = "blur(" + Math.max(4, minDim * 0.014) + "px)";
+    var fila = Math.round(34 * scale);
+    for (var k = 0; k < fila; k++) {
+      var hh2 = families[Math.floor(rnd() * families.length)] + (rnd() * 40 - 20);
+      var a2 = (0.016 + rnd() * 0.042) * alphaScale;
+      var x0 = rnd() * bw, y0 = rnd() * bh;
+      var len = minDim * (0.08 + rnd() * 0.26);
+      var ang = rnd() * Math.PI * 2;
+      var bend = (rnd() - 0.5) * len * 0.85;
+      var x1 = x0 + Math.cos(ang) * len, y1 = y0 + Math.sin(ang) * len;
+      var cx = (x0 + x1) / 2 - Math.sin(ang) * bend;
+      var cy = (y0 + y1) / 2 + Math.cos(ang) * bend;
+      g.strokeStyle = hsl(hh2, 50, 62, a2);
+      g.lineWidth = Math.max(2, minDim * (0.006 + rnd() * 0.020));
+      g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(x0, y0);
+      g.quadraticCurveTo(cx, cy, x1, y1);
+      g.stroke();
     }
     if ("filter" in g) g.filter = "none";
     g.restore();
+  }
 
-    // distant field stars
-    var count = clamp(Math.round((W * H) / 5200), 220, 1100);
-    for (var s = 0; s < count; s++) {
-      var x = rnd() * bw, y = rnd() * bh;
-      var r = 0.35 + Math.pow(rnd(), 2.4) * 1.5;
-      var a = 0.10 + Math.pow(rnd(), 1.9) * 0.62;
-      var tinge = rnd();
-      var col = tinge > 0.86
-        ? "rgba(190,214,255," + a.toFixed(3) + ")"
-        : tinge > 0.72
-          ? "rgba(255,226,196," + a.toFixed(3) + ")"
-          : "rgba(240,246,255," + a.toFixed(3) + ")";
-      g.fillStyle = col;
-      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  function paintDustLanes(g, bw, bh, ang, rnd, darkness) {
+    // dark obscuring rifts crossing the band -> the signature look of a real galaxy
+    g.save();
+    g.globalCompositeOperation = "source-over";
+    g.translate(bw / 2, bh / 2);
+    g.rotate(ang);
+    if ("filter" in g) g.filter = "blur(" + Math.round(Math.min(bw, bh) * 0.030) + "px)";
+    var lanes = 7 + Math.floor(rnd() * 6);
+    for (var i = 0; i < lanes; i++) {
+      var y = (rnd() - 0.5) * bh * 0.22;
+      var x0 = -bw * 0.7 + rnd() * bw * 0.3;
+      var x1 = bw * 0.7 - rnd() * bw * 0.3;
+      var my = y + (rnd() - 0.5) * bh * 0.04;
+      // keep rifts as texture inside the band, never as a hard black stripe
+      g.strokeStyle = "rgba(2,3,6," + (darkness * (0.045 + rnd() * 0.085)).toFixed(3) + ")";
+      g.lineWidth = Math.max(1.5, Math.min(bw, bh) * (0.004 + rnd() * 0.014));
+      g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(x0, y);
+      g.quadraticCurveTo(0, my, x1, y + (rnd() - 0.5) * bh * 0.05);
+      g.stroke();
     }
+    if ("filter" in g) g.filter = "none";
+    g.restore();
+  }
 
-    // a faint galactic band
+  function buildSky(S) {
+    var rnd = mulberry32(S.seed ^ 0x5bf03635);
+    var portrait = H > W * 1.15;
+    // A galactic band should sweep across the frame at a shallow angle.
+    // Full-circle angles make it read as a vertical smear, not a Milky Way,
+    // and portrait frames need an even flatter band.
+    var bandAng = portrait
+      ? (-0.30 + rnd() * 0.60)
+      : (-0.62 + rnd() * 1.24);
+
+    // ---------- FAR ----------
+    var far = layerCanvas(1.35);
+    var g = far.g, bw = far.w, bh = far.h;
+
+    g.fillStyle = "#04050a";
+    g.fillRect(0, 0, bw, bh);
+    var base = g.createRadialGradient(CX + PAD, CY + PAD, 0, CX + PAD, CY + PAD, Math.max(bw, bh) * 0.8);
+    base.addColorStop(0, "rgba(11,16,32,1)");
+    base.addColorStop(0.55, "rgba(6,9,18,1)");
+    base.addColorStop(1, "rgba(3,4,8,1)");
+    g.fillStyle = base;
+    g.fillRect(0, 0, bw, bh);
+
+    paintNebula(g, bw, bh, S, rnd, 1, 1);
+
+    // galactic band glow
     g.save();
     g.globalCompositeOperation = "lighter";
-    var bandAng = rnd() * Math.PI;
     g.translate(bw / 2, bh / 2);
     g.rotate(bandAng);
-    var bg2 = g.createLinearGradient(0, -bh * 0.34, 0, bh * 0.34);
-    bg2.addColorStop(0, "rgba(120,150,220,0)");
-    bg2.addColorStop(0.5, "rgba(126,156,226,0.028)");
-    bg2.addColorStop(1, "rgba(120,150,220,0)");
-    g.fillStyle = bg2;
-    g.fillRect(-bw, -bh * 0.34, bw * 2, bh * 0.68);
+    var band = g.createLinearGradient(0, -bh * (portrait ? 0.17 : 0.30), 0, bh * (portrait ? 0.17 : 0.30));
+    band.addColorStop(0.00, "rgba(120,150,220,0)");
+    band.addColorStop(0.22, "rgba(126,155,222,0.014)");
+    band.addColorStop(0.38, "rgba(136,164,228,0.036)");
+    band.addColorStop(0.50, "rgba(150,175,232,0.058)");
+    band.addColorStop(0.62, "rgba(136,164,228,0.036)");
+    band.addColorStop(0.78, "rgba(126,155,222,0.014)");
+    band.addColorStop(1.00, "rgba(120,150,220,0)");
+    g.fillStyle = band;
+    g.fillRect(-bw, -bh * (portrait ? 0.17 : 0.30), bw * 2, bh * (portrait ? 0.34 : 0.60));
     g.restore();
 
-    bg = c;
+    // extra star density inside the band
+    paintStars(g, bw, bh, rnd, clamp(Math.round((W * H) / 9000), 150, 900), 0.28, 0.95, 0.05, 0.34, 0.72, bandAng);
+
+    // unresolved star grain along the band
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    var grain = Math.round(clamp((W * H) / 900, 400, 2600));
+    var rga = mulberry32(S.seed ^ 0x71ab33c5);
+    var ca2 = Math.cos(bandAng), sa2 = Math.sin(bandAng);
+    for (var gi = 0; gi < grain; gi++) {
+      var along = (rga() - 0.5) * (bw + bh);
+      var across = (rga() + rga() + rga() - 1.5) * bh * (portrait ? 0.048 : 0.085);
+      var gx = bw / 2 + ca2 * along - sa2 * across;
+      var gy = bh / 2 + sa2 * along + ca2 * across;
+      if (gx < 0 || gy < 0 || gx > bw || gy > bh) continue;
+      var ga = 0.025 + rga() * 0.075;
+      g.fillStyle = "rgba(226,236,255," + ga.toFixed(3) + ")";
+      g.fillRect(gx, gy, 0.7, 0.7);
+    }
+    g.restore();
+
+    // dark rifts over the band — skipped on portrait, where they smear
+    if (!portrait) paintDustLanes(g, bw, bh, bandAng, rnd, 1);
+
+    // galaxies, very faint
+    var gals = 4 + Math.floor(rnd() * 5);
+    for (var i = 0; i < gals; i++) {
+      paintGalaxy(
+        g,
+        PAD + rnd() * W, PAD + rnd() * H,
+        Math.min(W, H) * (0.012 + rnd() * 0.030),
+        rnd() * Math.PI,
+        rnd
+      );
+    }
+
+    // dense faint field
+    paintStars(g, bw, bh, rnd, clamp(Math.round((W * H) / 3400), 320, 1900), 0.25, 1.05, 0.045, 0.42, 0, bandAng);
+
+    // a handful of brighter foreground stars with small flares
+    var flared = Math.round(6 + rnd() * 8);
+    for (var f2 = 0; f2 < flared; f2++) {
+      var fx = PAD + rnd() * W, fy = PAD + rnd() * H;
+      var fr = 0.95 + rnd() * 1.15;
+      var tint = starTint(rnd());
+      var fa = 0.55 + rnd() * 0.35;
+      var halo = g.createRadialGradient(fx, fy, 0, fx, fy, fr * 7);
+      halo.addColorStop(0, "rgba(" + tint[0] + "," + tint[1] + "," + tint[2] + "," + (fa * 0.5).toFixed(3) + ")");
+      halo.addColorStop(0.28, "rgba(" + tint[0] + "," + tint[1] + "," + tint[2] + "," + (fa * 0.11).toFixed(3) + ")");
+      halo.addColorStop(1, "rgba(" + tint[0] + "," + tint[1] + "," + tint[2] + ",0)");
+      g.fillStyle = halo;
+      g.beginPath(); g.arc(fx, fy, fr * 7, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "rgba(255,255,255," + fa.toFixed(3) + ")";
+      g.beginPath(); g.arc(fx, fy, fr, 0, Math.PI * 2); g.fill();
+      // tiny cross
+      g.strokeStyle = "rgba(" + tint[0] + "," + tint[1] + "," + tint[2] + "," + (fa * 0.22).toFixed(3) + ")";
+      g.lineWidth = Math.max(0.5, fr * 0.34);
+      g.beginPath();
+      g.moveTo(fx - fr * 5, fy); g.lineTo(fx + fr * 5, fy);
+      g.moveTo(fx, fy - fr * 5); g.lineTo(fx, fy + fr * 5);
+      g.stroke();
+    }
+
+    skyFar = far.c;
+
+    // ---------- MID ----------
+    var mid = layerCanvas(1.6);
+    var gm = mid.g;
+    paintStars(gm, mid.w, mid.h, mulberry32(S.seed ^ 0x1d8f3b27), clamp(Math.round((W * H) / 15000), 60, 380), 0.45, 1.5, 0.10, 0.55, 0.25, bandAng);
+
+    // a few mid stars get a soft halo so the field has depth
+    var midFlare = Math.round(4 + rnd() * 5);
+    for (var m = 0; m < midFlare; m++) {
+      var mx = PAD + rnd() * W, my = PAD + rnd() * H;
+      var mr = 1.1 + rnd() * 1.4;
+      var mt = starTint(rnd());
+      var ma = 0.35 + rnd() * 0.3;
+      var mh = gm.createRadialGradient(mx, my, 0, mx, my, mr * 6);
+      mh.addColorStop(0, "rgba(" + mt[0] + "," + mt[1] + "," + mt[2] + "," + (ma * 0.55).toFixed(3) + ")");
+      mh.addColorStop(1, "rgba(" + mt[0] + "," + mt[1] + "," + mt[2] + ",0)");
+      gm.fillStyle = mh;
+      gm.beginPath(); gm.arc(mx, my, mr * 6, 0, Math.PI * 2); gm.fill();
+      gm.fillStyle = "rgba(255,255,255," + ma.toFixed(3) + ")";
+      gm.beginPath(); gm.arc(mx, my, mr, 0, Math.PI * 2); gm.fill();
+    }
+    skyMid = mid.c;
+
+    buildBokeh();
+  }
+
+  // Soft defocused sprites for foreground dust.
+  // Pre-rendered at several sizes and drawn 1:1, because scaling one large
+  // sprite down to a few pixels aliases into blocky squares.
+  var MOTE_SIZES = [4, 6, 8, 11, 15, 20, 27, 36];
+
+  function buildBokeh() {
+    bokehSprites = [];
+    for (var i = 0; i < MOTE_SIZES.length; i++) {
+      var size = MOTE_SIZES[i];
+      var c = document.createElement("canvas");
+      c.width = size; c.height = size;
+      var g = c.getContext("2d");
+      var r = size / 2;
+      var gr = g.createRadialGradient(r, r, 0, r, r, r);
+      gr.addColorStop(0.00, "rgba(255,255,255,0.42)");
+      gr.addColorStop(0.35, "rgba(244,249,255,0.20)");
+      gr.addColorStop(0.68, "rgba(224,236,255,0.075)");
+      gr.addColorStop(1.00, "rgba(210,228,255,0)");
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(r, r, r, 0, Math.PI * 2); g.fill();
+      bokehSprites.push({ c: c, size: size });
+    }
+  }
+
+  function motespriteFor(size) {
+    var best = bokehSprites[0];
+    var bestD = Infinity;
+    for (var i = 0; i < bokehSprites.length; i++) {
+      var d = Math.abs(bokehSprites[i].size - size * 2);
+      if (d < bestD) { bestD = d; best = bokehSprites[i]; }
+    }
+    return best;
   }
 
   // ---------- per-system animated bits ----------
   var dust = [], paths = [], twinkle = [];
+  var wind = [], motes = [], meteors = [], nextMeteor = 6;
+  var prand = Math.random; // replaced by a seeded stream on ignite
 
   function buildDynamic(S) {
     var rnd = mulberry32(S.seed ^ 0x27d4eb2f);
 
     dust = [];
     for (var i = 0; i < S.dustCount; i++) {
-      var a = S.coreR * (1.35 + Math.pow(rnd(), 0.7) * 4.6);
+      var a = S.coreR * (1.20 + Math.pow(rnd(), 0.9) * 3.4);
       dust.push({
         a: a,
         e: rnd() * 0.22,
         phase: rnd() * Math.PI * 2,
         bob: rnd() * Math.PI * 2,
         speed: (0.22 + rnd() * 0.55) * Math.pow((S.coreR * 3) / a, 1.4),
-        r: 0.45 + Math.pow(rnd(), 2.2) * 1.55,
-        al: 0.10 + rnd() * 0.34,
+        r: 0.30 + Math.pow(rnd(), 2.8) * 0.95,
+        al: 0.05 + rnd() * 0.20,
         hueShift: rnd() * 40 - 20,
         tilt: S.tilt * (0.5 + rnd())
       });
@@ -603,31 +861,92 @@
       paths.push(path);
     }
 
+    // ---- live near-field twinkling stars ----
     twinkle = [];
-    var tw = clamp(Math.round((W * H) / 26000), 18, 70);
+    var tw = clamp(Math.round((W * H) / 16000), 30, 130);
     var rt = mulberry32(S.seed ^ 0x1b56c4e9);
     for (var k = 0; k < tw; k++) {
+      var tintR = rt();
       twinkle.push({
         x: rt() * W, y: rt() * H,
-        r: 0.5 + rt() * 1.5,
+        r: 0.4 + Math.pow(rt(), 2) * 1.35,
         ph: rt() * Math.PI * 2,
-        sp: 0.35 + rt() * 1.5
+        sp: 0.28 + rt() * 1.7,
+        amp: 0.22 + rt() * 0.55,
+        tint: starTint(tintR),
+        glint: rt() < 0.13
       });
     }
+
+    // ---- solar wind: plasma streaming off the star ----
+    wind = [];
+    var rw = mulberry32(S.seed ^ 0x3ac9d17b);
+    var windCount = clamp(Math.round(110 + S.coreR * 0.75), 90, 260);
+    for (var wi = 0; wi < windCount; wi++) {
+      wind.push(newWindParticle(S, rw, true));
+    }
+
+    // ---- foreground dust motes (defocused, out-of-focus bokeh) ----
+    motes = [];
+    var rm2 = mulberry32(S.seed ^ 0x77e1c4a3);
+    var moteCount = clamp(Math.round((W * H) / 26000), 14, 60);
+    for (var mi = 0; mi < moteCount; mi++) {
+      motes.push({
+        x: rm2() * W, y: rm2() * H,
+        size: 1.0 + Math.pow(rm2(), 2.4) * 2.6,
+        alpha: 0.016 + rm2() * 0.040,
+        vx: (rm2() - 0.5) * 3.2,
+        vy: (rm2() - 0.5) * 2.4,
+        ph: rm2() * Math.PI * 2,
+        sp: 0.15 + rm2() * 0.45,
+        sprite: null, // assigned below by size bucket
+        depth: 0.5 + rm2() * 1.6
+      });
+    }
+
+    for (var mj = 0; mj < motes.length; mj++) {
+      motes[mj].sprite = motespriteFor(motes[mj].size);
+    }
+
+    // ---- meteors ----
+    meteors = [];
+    nextMeteor = 2.5 + rnd() * 5;
+    // ambient particles draw from a seeded stream, so a phrase reproduces
+    // not just the star but the sky around it
+    prand = mulberry32(S.seed ^ 0xc0ffee11);
+  }
+
+  function newWindParticle(S, r, scatter) {
+    var ang = r() * Math.PI * 2;
+    var r0 = S.coreR * (1.02 + r() * 0.5);
+    var speed = S.coreR * (0.30 + r() * 0.85);
+    var life = (0.55 + r() * 1.5);
+    return {
+      ang: ang,
+      rad: scatter ? r0 + r() * S.coreR * 4.2 : r0,
+      base: r0,
+      speed: speed,
+      life: scatter ? r() * life : life,
+      maxLife: life,
+      len: S.coreR * (0.08 + r() * 0.34),
+      w: 0.35 + r() * 1.1,
+      hueShift: r() * 26 - 13,
+      curl: (r() - 0.5) * 0.10,
+      flick: r() * Math.PI * 2
+    };
   }
 
   // ---------- state ----------
   var S = null;
-  var t0 = performance.now();
+  var t0 = performance.now(), lastNow = performance.now();
   var ignT = 0, IGN_DUR = 1150;
   var px = 0, py = 0, tpx = 0, tpy = 0;
-  var pending = null;
 
   function ignite(phrase, opts) {
     opts = opts || {};
     S = derive(phrase, W, H);
     buildSprite(S);
-    buildBackground(S);
+    buildSky(S);
     buildDynamic(S);
     ignT = REDUCED ? 0 : IGN_DUR;
     updateReadout(S);
@@ -651,7 +970,7 @@
   }
 
   // ---------- drawing ----------
-  function drawPlanet(g, pl, x, y, t, behind) {
+  function drawPlanet(g, pl, x, y) {
     var size = pl.size;
     // direction toward the star (origin)
     var dx = -x, dy = -y;
@@ -707,7 +1026,168 @@
     }
   }
 
+  // ---------- layer / particle renderers ----------
+  function drawSkyLayer(img, par, drift) {
+    if (!img) return;
+    var ox = -PAD - px * par + Math.sin(drift) * 3.5;
+    var oy = -PAD - py * par + Math.cos(drift * 0.77) * 2.6;
+    ctx.drawImage(img, ox, oy, W + PAD * 2, H + PAD * 2);
+  }
+
+  function updateMeteors(dt, t) {
+    if (t > nextMeteor) {
+      var ang = Math.PI * (0.12 + prand() * 0.26) + (prand() < 0.5 ? 0 : Math.PI * 0.55);
+      var fromLeft = prand() < 0.5;
+      var sp = 420 + prand() * 520;
+      meteors.push({
+        x: fromLeft ? -60 : W + 60,
+        y: prand() * H * 0.6,
+        vx: Math.cos(ang) * sp * (fromLeft ? 1 : -1),
+        vy: Math.sin(ang) * sp,
+        life: 0.9 + prand() * 0.7,
+        maxLife: 1.6,
+        len: 90 + prand() * 190,
+        w: 0.9 + prand() * 1.5,
+        hue: S.hue + (prand() * 40 - 20)
+      });
+      nextMeteor = t + 4 + prand() * 11;
+    }
+    for (var i = meteors.length - 1; i >= 0; i--) {
+      var m = meteors[i];
+      m.x += m.vx * dt; m.y += m.vy * dt; m.life -= dt;
+      if (m.life <= 0 || m.x < -300 || m.x > W + 300 || m.y > H + 300) meteors.splice(i, 1);
+    }
+  }
+
+  function drawMeteors() {
+    if (!meteors.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < meteors.length; i++) {
+      var m = meteors[i];
+      var k = m.life / m.maxLife;
+      var a = Math.sin(Math.min(1, k) * Math.PI) * 0.85;
+      var sp = Math.hypot(m.vx, m.vy) || 1;
+      var tx = m.x - (m.vx / sp) * m.len, ty = m.y - (m.vy / sp) * m.len;
+      var gr = ctx.createLinearGradient(m.x, m.y, tx, ty);
+      gr.addColorStop(0, hsl(m.hue, 40, 96, a));
+      gr.addColorStop(0.25, hsl(m.hue, 55, 84, a * 0.42));
+      gr.addColorStop(1, hsl(m.hue, 60, 70, 0));
+      ctx.strokeStyle = gr;
+      ctx.lineWidth = m.w;
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(tx, ty); ctx.stroke();
+      // head
+      ctx.fillStyle = hsl(m.hue, 20, 99, a * 0.9);
+      ctx.beginPath(); ctx.arc(m.x, m.y, m.w * 1.15, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawSolarWind(dt, t) {
+    if (!wind.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    var hue = S.hue, sat = S.sat;
+    for (var i = 0; i < wind.length; i++) {
+      var w = wind[i];
+      w.rad += w.speed * dt;
+      w.ang += w.curl * dt;
+      w.life -= dt;
+      if (w.life <= 0) {
+        w.ang = prand() * Math.PI * 2;
+        w.rad = w.base * (0.98 + prand() * 0.22);
+        w.life = w.maxLife;
+        w.len = S.coreR * (0.10 + prand() * 0.85);
+        w.w = 0.20 + prand() * 0.85;
+        w.curl = (prand() - 0.5) * 0.10;
+      }
+      var k = w.life / w.maxLife;
+      var ca = Math.cos(w.ang), sa = Math.sin(w.ang);
+      var r1 = w.rad;
+      var r0 = Math.max(S.coreR * 0.96, w.rad - w.len);
+      var span = r1 - r0;
+      if (span <= 0.5) continue;
+
+      // fade in out of the chromosphere, fade out with age and distance
+      var fade = Math.min(1, (r1 - S.coreR * 0.96) / (S.coreR * 0.9));
+      var a = fade * Math.pow(k, 1.25) * 0.42;
+      if (a <= 0.003) continue;
+
+      var flick = 0.75 + 0.25 * Math.sin(t * 2.4 + w.flick);
+      a *= flick;
+
+      // tapered streamer: wide at the base, hair-thin at the tip
+      var w0 = w.w * Math.max(0.8, S.coreR * 0.012) * (1 + span / (S.coreR * 2.2));
+      var w1 = w0 * 0.10;
+      var pxp = -sa, pyp = ca;
+
+      var x0 = ca * r0, y0 = sa * r0;
+      var x1 = ca * r1, y1 = sa * r1;
+
+      var grd = ctx.createLinearGradient(x0, y0, x1, y1);
+      grd.addColorStop(0.00, hsl(hue + w.hueShift, sat, 72, a * 0.25));
+      grd.addColorStop(0.35, hsl(hue + w.hueShift, sat, 84, a * 0.85));
+      grd.addColorStop(1.00, hsl(hue + w.hueShift, sat - 12, 94, 0));
+      ctx.fillStyle = grd;
+
+      ctx.beginPath();
+      ctx.moveTo(x0 + pxp * w0, y0 + pyp * w0);
+      ctx.lineTo(x1 + pxp * w1, y1 + pyp * w1);
+      ctx.lineTo(x1 - pxp * w1, y1 - pyp * w1);
+      ctx.lineTo(x0 - pxp * w0, y0 - pyp * w0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawMotes(dt, t) {
+    if (!motes.length || !bokehSprites) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < motes.length; i++) {
+      var m = motes[i];
+      m.x += m.vx * dt * m.depth;
+      m.y += m.vy * dt * m.depth;
+      if (m.x < -20) m.x = W + 20; else if (m.x > W + 20) m.x = -20;
+      if (m.y < -20) m.y = H + 20; else if (m.y > H + 20) m.y = -20;
+      var tw = 0.72 + 0.28 * Math.sin(t * m.sp + m.ph);
+      ctx.globalAlpha = clamp(m.alpha * tw, 0, 1);
+      var sp = m.sprite;
+      var ox = m.x - px * 6 * m.depth, oy = m.y - py * 6 * m.depth;
+      ctx.drawImage(sp.c, Math.round(ox - sp.size / 2), Math.round(oy - sp.size / 2));
+    }
+    ctx.restore();
+  }
+
+  function drawTwinkle(t) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < twinkle.length; i++) {
+      var tw = twinkle[i];
+      var osc = 0.5 + 0.5 * Math.sin(t * tw.sp + tw.ph);
+      var a = 0.10 + tw.amp * osc;
+      var x = tw.x - px * 14, y = tw.y - py * 14;
+      ctx.fillStyle = "rgba(" + tw.tint[0] + "," + tw.tint[1] + "," + tw.tint[2] + "," + a.toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(x, y, tw.r, 0, Math.PI * 2); ctx.fill();
+      if (tw.glint && osc > 0.82) {
+        var g = (osc - 0.82) / 0.18;
+        ctx.strokeStyle = "rgba(" + tw.tint[0] + "," + tw.tint[1] + "," + tw.tint[2] + "," + (a * 0.55 * g).toFixed(3) + ")";
+        ctx.lineWidth = Math.max(0.4, tw.r * 0.5);
+        ctx.beginPath();
+        ctx.moveTo(x - tw.r * 4.5 * g, y); ctx.lineTo(x + tw.r * 4.5 * g, y);
+        ctx.moveTo(x, y - tw.r * 4.5 * g); ctx.lineTo(x, y + tw.r * 4.5 * g);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   function frame(now) {
+    var dtRaw = (now - lastNow) / 1000;
+    lastNow = now;
+    var dt = Math.min(0.06, Math.max(0.0005, dtRaw)) * S.rm;
     var t = ((now - t0) / 1000) * S.rm;
 
     px += (tpx - px) * 0.05;
@@ -717,19 +1197,14 @@
     ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 1;
 
-    // background with slow parallax
-    ctx.drawImage(bg, -PAD - px * 10, -PAD - py * 10, W + PAD * 2, H + PAD * 2);
+    // --- deep sky, three depths ---
+    drawSkyLayer(skyFar, 7, t * 0.05);
+    drawSkyLayer(skyMid, 16, t * 0.085 + 2.1);
 
-    // twinkling near stars
-    ctx.globalCompositeOperation = "lighter";
-    for (var i = 0; i < twinkle.length; i++) {
-      var tw = twinkle[i];
-      var a = 0.18 + 0.5 * (0.5 + 0.5 * Math.sin(t * tw.sp + tw.ph));
-      ctx.fillStyle = "rgba(232,240,255," + a.toFixed(3) + ")";
-      ctx.beginPath();
-      ctx.arc(tw.x - px * 14, tw.y - py * 14, tw.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    updateMeteors(dt, t);
+    drawMeteors();
+
+    drawTwinkle(t);
 
     var sx = CX - px * 26, sy = CY - py * 26;
 
@@ -782,13 +1257,22 @@
       var item = { pl: pl, x: px2, y: py2, z: Math.sin(th2) };
       if (item.z < 0) back.push(item); else front.push(item);
     }
-    for (var b = 0; b < back.length; b++) drawPlanet(ctx, back[b].pl, back[b].x, back[b].y, t, true);
+    for (var b = 0; b < back.length; b++) drawPlanet(ctx, back[b].pl, back[b].x, back[b].y);
 
     ctx.restore();
     ctx.save();
     ctx.translate(sx, sy);
-    for (var f = 0; f < front.length; f++) drawPlanet(ctx, front[f].pl, front[f].x, front[f].y, t, false);
+    for (var f = 0; f < front.length; f++) drawPlanet(ctx, front[f].pl, front[f].x, front[f].y);
     ctx.restore();
+
+    // ---- solar wind streaming off the star ----
+    ctx.save();
+    ctx.translate(sx, sy);
+    drawSolarWind(dt, t);
+    ctx.restore();
+
+    // ---- foreground dust, closest to camera ----
+    drawMotes(dt, t);
 
     // ---- ignition burst ----
     if (ignT > 0) {
