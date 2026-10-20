@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NOVA — every phrase ignites a star</title>
+<meta name="description" content="Type any phrase. Nova deterministically ignites a unique star system from it. Same words, same star, forever.">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="NOVA — every phrase ignites a star">
+<meta property="og:description" content="Type any phrase and Nova ignites a unique star system. Deterministic generative astronomy in a single HTML file.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23fff'/%3E%3Cstop offset='.45' stop-color='%23ffd9a0'/%3E%3Cstop offset='1' stop-color='%23ff8a3d' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='32' height='32' fill='%2306080d'/%3E%3Ccircle cx='16' cy='16' r='15' fill='url(%23g)'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --ink: #eaf0ff;
+    --dim: rgba(210,224,255,.52);
+    --faint: rgba(190,208,255,.30);
+    --line: rgba(150,180,255,.16);
+    --glass: rgba(10,16,30,.42);
+    --accent: #9ec5ff;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background:#05060a;
+    color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  #sky{ position:fixed; inset:0; width:100%; height:100%; display:block; }
+  .grain{
+    position:fixed; inset:0; pointer-events:none; z-index:2;
+    opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:2;
+    background:radial-gradient(120% 90% at 50% 46%, transparent 42%, rgba(0,0,0,.55) 100%);
+  }
+  .ui{ position:fixed; inset:0; z-index:3; pointer-events:none; }
+  .ui > *{ pointer-events:auto; }
+
+  /* ---------- header ---------- */
+  header{
+    position:fixed; top:0; left:0; padding:clamp(18px,3.4vw,34px) clamp(18px,3.6vw,38px);
+    display:flex; flex-direction:column; gap:7px;
+  }
+  .wordmark{
+    font-size:clamp(15px,1.45vw,18px); font-weight:600; letter-spacing:.52em;
+    text-transform:uppercase; color:var(--ink); margin:0;
+    text-indent:.52em; opacity:.95;
+  }
+  .tagline{
+    margin:0; font-size:clamp(10.5px,1.02vw,12.5px); letter-spacing:.16em;
+    text-transform:lowercase; color:var(--dim);
+  }
+
+  /* ---------- readout ---------- */
+  #readout{
+    position:fixed; right:clamp(14px,3.2vw,34px); top:clamp(14px,3.4vw,34px);
+    min-width:186px; padding:14px 16px 13px;
+    border:1px solid var(--line); border-radius:14px;
+    background:var(--glass);
+    -webkit-backdrop-filter:blur(14px) saturate(120%);
+    backdrop-filter:blur(14px) saturate(120%);
+    font-family:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size:11px; line-height:1.55; color:var(--dim);
+    opacity:0; transform:translateY(-6px);
+    transition:opacity .6s ease .2s, transform .6s ease .2s;
+  }
+  #readout.on{ opacity:1; transform:none; }
+  #readout .row{ display:flex; justify-content:space-between; gap:18px; }
+  #readout .k{ color:var(--faint); letter-spacing:.13em; text-transform:uppercase; font-size:9.5px; }
+  #readout .v{ color:var(--ink); opacity:.9; font-variant-numeric:tabular-nums; }
+  #readout .title{
+    font-family:ui-serif, Georgia, "Times New Roman", serif;
+    font-size:15px; line-height:1.3; color:var(--ink); margin:0 0 10px;
+    letter-spacing:.005em; word-break:break-word;
+  }
+  #readout .rule{ height:1px; background:var(--line); margin:9px 0 8px; }
+  @media (max-width:640px){
+    #readout{ top:auto; bottom:calc(env(safe-area-inset-bottom,0px) + 118px); right:14px; left:14px; min-width:0; display:flex; gap:20px; padding:11px 13px; }
+    #readout .title, #readout .rule{ display:none; }
+    #readout .col{ display:none; }
+    #readout .col.main{ display:block; flex:1; }
+  }
+
+  /* ---------- footer / forge ---------- */
+  footer{
+    position:fixed; left:0; right:0; bottom:0;
+    padding:0 16px calc(env(safe-area-inset-bottom,0px) + clamp(20px,3.4vw,34px));
+    display:flex; flex-direction:column; align-items:center; gap:11px;
+  }
+  form#forge{
+    display:flex; align-items:center; gap:8px;
+    width:min(560px,100%); padding:7px 7px 7px 16px;
+    border:1px solid var(--line); border-radius:999px;
+    background:rgba(9,14,26,.62);
+    -webkit-backdrop-filter:blur(16px) saturate(130%);
+    backdrop-filter:blur(16px) saturate(130%);
+    transition:border-color .35s ease, box-shadow .35s ease, background .35s ease;
+  }
+  form#forge:focus-within{
+    border-color:rgba(158,197,255,.42);
+    box-shadow:0 0 0 4px rgba(120,170,255,.07), 0 18px 60px -22px rgba(120,170,255,.5);
+    background:rgba(11,17,31,.78);
+  }
+  .spark{ flex:0 0 auto; width:15px; height:15px; opacity:.55; }
+  #phrase{
+    flex:1 1 auto; min-width:0; background:none; border:0; outline:none; color:var(--ink);
+    font-size:15px; letter-spacing:.01em; padding:9px 2px;
+    font-family:inherit; text-overflow:ellipsis;
+  }
+  #phrase::placeholder{ color:rgba(190,208,255,.36); }
+  .btn{
+    flex:0 0 auto; width:36px; height:36px; display:grid; place-items:center;
+    border-radius:50%; border:1px solid transparent; background:rgba(255,255,255,.05);
+    color:rgba(226,236,255,.78); cursor:pointer; padding:0;
+    transition:background .2s ease, color .2s ease, transform .2s ease, border-color .2s ease;
+  }
+  .btn:hover{ background:rgba(158,197,255,.14); color:#fff; border-color:rgba(158,197,255,.3); }
+  .btn:active{ transform:scale(.93); }
+  .btn:focus-visible{ outline:2px solid rgba(158,197,255,.7); outline-offset:2px; }
+  .btn svg{ width:16px; height:16px; display:block; }
+  .hint{
+    font-size:10px; letter-spacing:.17em; text-transform:uppercase; color:rgba(180,198,235,.30);
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center; align-items:center;
+  }
+  .hint kbd{
+    font-family:ui-monospace, monospace; font-size:9.5px; letter-spacing:.06em;
+    border:1px solid rgba(180,200,255,.18); border-radius:4px; padding:1px 5px; color:rgba(200,216,245,.55);
+  }
+  @media (max-width:520px){ .hint{ display:none; } }
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 118px);
+    transform:translate(-50%,10px); z-index:6;
+    padding:9px 15px; border-radius:999px; border:1px solid var(--line);
+    background:rgba(10,16,30,.9); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    font-family:ui-monospace, monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:rgba(226,236,255,.85); opacity:0; pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  #toast.on{ opacity:1; transform:translate(-50%,0); }
+
+  .sr{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition-duration:.01ms !important; } }
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="vignette"></div>
+<div class="grain"></div>
+
+<header>
+  <h1 class="wordmark">Nova</h1>
+  <p class="tagline">every phrase ignites a star</p>
+</header>
+
+<aside id="readout" aria-live="polite" aria-label="Star readout">
+  <p class="title" id="roTitle">nova</p>
+  <div class="col main">
+    <div class="row"><span class="k">Class</span><span class="v" id="roClass">G2 V</span></div>
+    <div class="row"><span class="k">Surface</span><span class="v" id="roTemp">5,800 K</span></div>
+    <div class="row"><span class="k">Mass</span><span class="v" id="roMass">1.00 M☉</span></div>
+  </div>
+  <div class="col">
+    <div class="rule"></div>
+    <div class="row"><span class="k">Worlds</span><span class="v" id="roWorlds">2</span></div>
+    <div class="row"><span class="k">Seed</span><span class="v" id="roSeed">0x00000000</span></div>
+  </div>
+</aside>
+
+<footer>
+  <form id="forge" autocomplete="off">
+    <svg class="spark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 2.6l1.9 6.1 6.1 1.9-6.1 1.9L12 18.6l-1.9-6.1L4 10.6l6.1-1.9L12 2.6z" fill="currentColor" opacity=".85"/>
+    </svg>
+    <label class="sr" for="phrase">Phrase to ignite a star from</label>
+    <input id="phrase" type="text" placeholder="type a phrase…" maxlength="64" spellcheck="false" aria-describedby="hintText">
+    <button class="btn" type="button" id="dice" title="Random star" aria-label="Random phrase">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="4.2"/><circle cx="8.6" cy="8.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.4" cy="15.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.6" cy="15.4" r="1.15" fill="currentColor" stroke="none"/>
+      </svg>
+    </button>
+    <button class="btn" type="button" id="share" title="Copy link to this star" aria-label="Copy link to this star">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10.2 13.8a4.6 4.6 0 0 0 6.5 0l2.6-2.6a4.6 4.6 0 0 0-6.5-6.5l-1.4 1.4"/>
+        <path d="M13.8 10.2a4.6 4.6 0 0 0-6.5 0l-2.6 2.6a4.6 4.6 0 0 0 6.5 6.5l1.4-1.4"/>
+      </svg>
+    </button>
+  </form>
+  <div class="hint" id="hintText"><span>same words · same star · forever</span><span><kbd>/</kbd> to type</span></div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+(function () {
+  /* ============================================================
+     NOVA — deterministic generative star systems
+     phrase -> FNV-1a hash -> PRNG -> one specific star, forever
+     ============================================================ */
+
+  var cv = document.getElementById("sky");
+  var ctx = cv.getContext("2d", { alpha: false });
+
+  var DPR = 1, W = 0, H = 0, CX = 0, CY = 0;
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- hashing / prng ----------
+  function fnv1a(str) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    }
+    return h >>> 0;
+  }
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var lerp = function (a, b, t) { return a + (b - a) * t; };
+  var clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+
+  // ---------- colour ----------
+  // Stellar colour ramp: cool red -> orange -> gold -> white -> pale blue.
+  var RAMP = [
+    [2200, 255, 116, 38],
+    [3500, 255, 166, 88],
+    [4800, 255, 212, 146],
+    [6000, 255, 243, 222],
+    [7500, 243, 247, 255],
+    [10000, 199, 221, 255],
+    [20000, 166, 196, 255],
+    [42000, 142, 174, 255]
+  ];
+  function tempToRgb(k) {
+    k = clamp(k, RAMP[0][0], RAMP[RAMP.length - 1][0]);
+    for (var i = 0; i < RAMP.length - 1; i++) {
+      var a = RAMP[i], b = RAMP[i + 1];
+      if (k <= b[0]) {
+        var t = (k - a[0]) / (b[0] - a[0]);
+        return [lerp(a[1], b[1], t), lerp(a[2], b[2], t), lerp(a[3], b[3], t)];
+      }
+    }
+    return [142, 174, 255];
+  }
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    var h = 0, s = 0, l = (mx + mn) / 2, d = mx - mn;
+    if (d) {
+      s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+      if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0));
+      else if (mx === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    return [h, s * 100, l * 100];
+  }
+  function hsl(h, s, l, a) {
+    return "hsla(" + ((h % 360 + 360) % 360).toFixed(1) + "," + clamp(s, 0, 100).toFixed(1) + "%," + clamp(l, 0, 100).toFixed(1) + "%," + (a === undefined ? 1 : a) + ")";
+  }
+
+  // ---------- spectral class ----------
+  function spectralClass(k) {
+    if (k >= 30000) return "O";
+    if (k >= 10000) return "B";
+    if (k >= 7500) return "A";
+    if (k >= 6000) return "F";
+    if (k >= 5200) return "G";
+    if (k >= 3700) return "K";
+    return "M";
+  }
+  function roman(n) { return ["", "I", "II", "III", "IV", "V"][n] || "V"; }
+
+  // ---------- derive a system from a phrase ----------
+  function derive(phrase, w, h) {
+    var seed = fnv1a(phrase.trim().toLowerCase() || "nova");
+    var rnd = mulberry32(seed);
+    // narrow/portrait screens need a larger star to fill the frame
+    var boost = w < 520 ? 1.62 : w < 760 ? 1.34 : w < 1000 ? 1.12 : 1.0;
+    var minDim = Math.min(w, h) * boost;
+
+    // pick a spectral class first, so every phrase lands somewhere genuinely different
+    var CLASSES = [
+      { k: "M", lo: 2600, hi: 3700, w: 0.26 },
+      { k: "K", lo: 3700, hi: 5200, w: 0.20 },
+      { k: "G", lo: 5200, hi: 6000, w: 0.20 },
+      { k: "F", lo: 6000, hi: 7500, w: 0.17 },
+      { k: "A", lo: 7500, hi: 10000, w: 0.11 },
+      { k: "B", lo: 10000, hi: 26000, w: 0.06 }
+    ];
+    var roll = rnd(), acc = 0, cls = CLASSES[2];
+    for (var ci = 0; ci < CLASSES.length; ci++) {
+      acc += CLASSES[ci].w;
+      if (roll <= acc) { cls = CLASSES[ci]; break; }
+    }
+    // log-uniform inside the class band keeps temperatures natural, not clustered
+    var lg = Math.log(cls.lo) + rnd() * (Math.log(cls.hi) - Math.log(cls.lo));
+    var temp = Math.exp(lg);
+    var subclass = clamp(9 - Math.floor(((lg - Math.log(cls.lo)) / (Math.log(cls.hi) - Math.log(cls.lo))) * 10), 0, 9);
+    // main-sequence mass estimate from temperature (loose, for the readout)
+    var mass = clamp(Math.pow(temp / 5800, 1.72), 0.10, 18.0);
+    var rgb = tempToRgb(temp);
+    var hslv = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+    // push saturation a little for a more luminous glow than the flat ramp
+    var hue = hslv[0];
+    var sat = clamp(hslv[1] * 1.28 + 14, 8, 96);
+    var coreR = minDim * (0.036 + 0.026 * Math.pow(clamp(mass / 3.2, 0, 1.4), 0.62));
+    var lum = clamp(0.55 + 0.45 * Math.pow(mass / 2.5, 0.6), 0.6, 1.25);
+
+    var worlds = 1 + Math.floor(rnd() * 3);
+    var planets = [];
+    // hand-picked planetary palettes keep every world tasteful: ice, rust, ocean, violet, rose, sand
+    var PALETTES = [[206, 46, 56], [22, 52, 55], [190, 44, 50], [276, 32, 56], [334, 40, 58], [44, 44, 60]];
+    for (var i = 0; i < worlds; i++) {
+      var a = coreR * (2.15 + i * (0.95 + rnd() * 0.45)) * (0.96 + rnd() * 0.14);
+      var pal = PALETTES[Math.floor(rnd() * PALETTES.length)];
+      planets.push({
+        a: a,
+        e: 0.03 + rnd() * 0.14,
+        size: coreR * (0.19 + rnd() * 0.21),
+        phase: rnd() * Math.PI * 2,
+        speed: (0.24 + rnd() * 0.16) * Math.pow(coreR * 3 / a, 1.5),
+        orbitTilt: rnd() * Math.PI * 2,
+        tone: pal[0] + (rnd() * 14 - 7),
+        pSat: pal[1] + (rnd() * 12 - 6),
+        pLit: pal[2] + (rnd() * 10 - 5),
+        ring: rnd() < 0.28,
+        seed: rnd()
+      });
+    }
+
+    return {
+      phrase: phrase.trim() || "nova",
+      seed: seed,
+      mass: mass,
+      temp: temp,
+      subclass: subclass,
+      hue: hue,
+      sat: sat,
+      lum: lum,
+      coreR: coreR,
+      rgb: rgb,
+      worlds: worlds,
+      planets: planets,
+      tilt: rnd() * Math.PI * 2,
+      dustCount: 70 + Math.floor(rnd() * 90),
+      rayCount: 54 + Math.floor(rnd() * 70),
+      flares: 4 + Math.floor(rnd() * 5),
+      nebula: 3 + Math.floor(rnd() * 3),
+      offset: rnd() * 1000,
+      rm: REDUCED ? 0.25 : 1
+    };
+  }
+
+  // ---------- build the star sprite (expensive, done once per system) ----------
+  var sprite = null, spriteHalf = 0;
+
+  function buildSprite(S) {
+    var R = S.coreR;
+    var half = R * 7.2;
+    var dpr = DPR;
+    var c = document.createElement("canvas");
+    c.width = Math.ceil(half * 2 * dpr);
+    c.height = Math.ceil(half * 2 * dpr);
+    var g = c.getContext("2d");
+    g.scale(dpr, dpr);
+    g.translate(half, half);
+
+    var rnd = mulberry32(S.seed ^ 0x9e3779b9);
+    var hue = S.hue, sat = S.sat, lum = S.lum;
+    var canBlur = "filter" in g;
+
+    // ---- 1. broad atmospheric bloom ----
+    var halo = g.createRadialGradient(0, 0, 0, 0, 0, half);
+    halo.addColorStop(0.000, hsl(hue, sat * 0.7, 80, 0.50 * lum));
+    halo.addColorStop(0.050, hsl(hue, sat * 0.85, 74, 0.32 * lum));
+    halo.addColorStop(0.115, hsl(hue, sat, 68, 0.150 * lum));
+    halo.addColorStop(0.230, hsl(hue, sat - 3, 63, 0.058 * lum));
+    halo.addColorStop(0.450, hsl(hue, sat - 6, 60, 0.016 * lum));
+    halo.addColorStop(0.700, hsl(hue, sat - 8, 58, 0.004 * lum));
+    halo.addColorStop(1.000, hsl(hue, sat - 10, 58, 0));
+    g.fillStyle = halo;
+    g.beginPath(); g.arc(0, 0, half, 0, Math.PI * 2); g.fill();
+
+    // ---- 2. corona rays (soft, irregular) ----
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    if (canBlur) g.filter = "blur(" + Math.max(2, R * 0.085).toFixed(1) + "px)";
+    for (var i = 0; i < S.rayCount; i++) {
+      var ang = rnd() * Math.PI * 2;
+      var inner = R * (0.88 + rnd() * 0.22);
+      var len = R * (1.12 + Math.pow(rnd(), 2.1) * 2.3);
+      var wdt = R * (0.030 + Math.pow(rnd(), 1.5) * 0.115);
+      var al = (0.030 + rnd() * 0.072) * lum;
+      var grd = g.createLinearGradient(
+        Math.cos(ang) * inner, Math.sin(ang) * inner,
+        Math.cos(ang) * len, Math.sin(ang) * len
+      );
+      grd.addColorStop(0.00, hsl(hue, sat, 82, al));
+      grd.addColorStop(0.22, hsl(hue, sat, 74, al * 0.46));
+      grd.addColorStop(0.60, hsl(hue, sat, 66, al * 0.11));
+      grd.addColorStop(1.00, hsl(hue, sat, 62, 0));
+      g.strokeStyle = grd;
+      g.lineWidth = wdt;
+      g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(Math.cos(ang) * inner, Math.sin(ang) * inner);
+      g.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
+      g.stroke();
+    }
+    if (canBlur) g.filter = "none";
+    g.restore();
+
+    // ---- 3. anamorphic streak (thin, feathered) ----
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    if (canBlur) g.filter = "blur(" + Math.max(2, R * 0.10).toFixed(1) + "px)";
+    var SL = R * 7.0;
+    var st = g.createLinearGradient(-SL, 0, SL, 0);
+    st.addColorStop(0.00, hsl(hue, sat - 20, 82, 0));
+    st.addColorStop(0.26, hsl(hue, sat - 14, 85, 0.045 * lum));
+    st.addColorStop(0.44, hsl(hue, sat - 24, 93, 0.100 * lum));
+    st.addColorStop(0.50, hsl(hue, sat - 30, 99, 0.150 * lum));
+    st.addColorStop(0.56, hsl(hue, sat - 24, 93, 0.100 * lum));
+    st.addColorStop(0.74, hsl(hue, sat - 14, 85, 0.045 * lum));
+    st.addColorStop(1.00, hsl(hue, sat - 20, 82, 0));
+    g.fillStyle = st;
+    g.beginPath(); g.ellipse(0, 0, SL, R * 0.115, 0, 0, Math.PI * 2); g.fill();
+    if (canBlur) g.filter = "none";
+    g.restore();
+
+    // ---- 4. diffraction spikes (subtle cross) ----
+    var spikes = [[1, 0], [0.62, 0.62]];
+    for (var s = 0; s < spikes.length; s++) {
+      for (var k = 0; k < 2; k++) {
+        var sc = k === 0 ? 1 : -1;
+        var sx0 = spikes[s][0] * sc, sy0 = spikes[s][1] * sc;
+        var L = R * (spikes[s][0] === 1 ? 4.6 : 2.9) * (0.85 + rnd() * 0.3);
+        var sg = g.createLinearGradient(0, 0, sx0 * L, sy0 * L);
+        sg.addColorStop(0.00, hsl(hue, sat - 12, 94, 0.30 * lum));
+        sg.addColorStop(0.16, hsl(hue, sat - 12, 88, 0.105 * lum));
+        sg.addColorStop(0.48, hsl(hue, sat - 12, 84, 0.022 * lum));
+        sg.addColorStop(1.00, hsl(hue, sat - 12, 82, 0));
+        g.strokeStyle = sg;
+        g.lineWidth = R * (spikes[s][0] === 1 ? 0.055 : 0.032);
+        g.lineCap = "round";
+        g.beginPath(); g.moveTo(0, 0); g.lineTo(sx0 * L, sy0 * L); g.stroke();
+      }
+    }
+
+    // ---- 5. core: smooth, no hard rim ----
+    // photosphere with limb darkening -> reads as a sphere, not a disc.
+    // the white-hot core grows with temperature, so an M dwarf stays ember-orange
+    // while an A star is almost pure white.
+    var heat = clamp((Math.log(S.temp) - Math.log(2600)) / (Math.log(26000) - Math.log(2600)), 0, 1);
+    var wR = 0.13 + 0.33 * heat;                 // where the white core fades out
+    var limb = 0.545;                            // start of limb darkening
+    var mid = Math.min(limb - 0.04, wR + Math.max(0.045, (limb - wR) * 0.5));
+
+    var core = g.createRadialGradient(0, 0, 0, 0, 0, R * 1.10);
+    core.addColorStop(0.000, "rgba(255,255,255,1)");
+    core.addColorStop(Math.max(0.02, wR * 0.55), "rgba(255,255,251,1)");
+    core.addColorStop(wR, hsl(hue, sat * 0.30, 98.5, 1));
+    core.addColorStop(mid, hsl(hue, sat * 0.62, 93.0, 1));
+    core.addColorStop(limb, hsl(hue, sat * 0.86, 85.0, 1));      /* limb begins */
+    core.addColorStop(0.600, hsl(hue, sat, 73.0, 0.99));         /* darkened limb */
+    core.addColorStop(0.640, hsl(hue, sat, 67.0, 0.70));
+    core.addColorStop(0.700, hsl(hue, sat, 64.0, 0.34));         /* chromosphere */
+    core.addColorStop(0.790, hsl(hue, sat, 62.0, 0.115));
+    core.addColorStop(0.890, hsl(hue, sat, 61.0, 0.030));
+    core.addColorStop(1.000, hsl(hue, sat, 61.0, 0));
+    g.fillStyle = core;
+    g.beginPath(); g.arc(0, 0, R * 1.10, 0, Math.PI * 2); g.fill();
+
+    sprite = c;
+    spriteHalf = half;
+  }
+
+  // ---------- background: distant stars + nebula (static, rebuilt per system) ----------
+  var bg = null, PAD = 90;
+
+  function buildBackground(S) {
+    var dpr = DPR;
+    var c = document.createElement("canvas");
+    c.width = Math.ceil((W + PAD * 2) * dpr);
+    c.height = Math.ceil((H + PAD * 2) * dpr);
+    var g = c.getContext("2d");
+    g.scale(dpr, dpr);
+
+    var bw = W + PAD * 2, bh = H + PAD * 2;
+    var rnd = mulberry32(S.seed ^ 0x5bf03635);
+
+    // deep base gradient
+    g.fillStyle = "#05060a";
+    g.fillRect(0, 0, bw, bh);
+    var base = g.createRadialGradient(CX + PAD, CY + PAD, 0, CX + PAD, CY + PAD, Math.max(bw, bh) * 0.78);
+    base.addColorStop(0, "rgba(12,18,36,1)");
+    base.addColorStop(0.55, "rgba(7,10,20,1)");
+    base.addColorStop(1, "rgba(4,5,9,1)");
+    g.fillStyle = base;
+    g.fillRect(0, 0, bw, bh);
+
+    // nebula clouds
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    if ("filter" in g) g.filter = "blur(" + Math.round(46 * Math.min(1, Math.min(W, H) / 900)) + "px)";
+    for (var i = 0; i < S.nebula; i++) {
+      var nx = PAD + W * (0.12 + rnd() * 0.76);
+      var ny = PAD + H * (0.10 + rnd() * 0.8);
+      var nr = Math.min(W, H) * (0.16 + rnd() * 0.30);
+      var nh = S.hue + (rnd() * 80 - 40);
+      var na = 0.035 + rnd() * 0.06;
+      var ng = g.createRadialGradient(nx, ny, 0, nx, ny, nr);
+      ng.addColorStop(0, hsl(nh, S.sat * 0.7, 46, na));
+      ng.addColorStop(0.55, hsl(nh, S.sat * 0.6, 40, na * 0.42));
+      ng.addColorStop(1, hsl(nh, S.sat * 0.5, 38, 0));
+      g.fillStyle = ng;
+      g.beginPath(); g.arc(nx, ny, nr, 0, Math.PI * 2); g.fill();
+    }
+    if ("filter" in g) g.filter = "none";
+    g.restore();
+
+    // distant field stars
+    var count = clamp(Math.round((W * H) / 5200), 220, 1100);
+    for (var s = 0; s < count; s++) {
+      var x = rnd() * bw, y = rnd() * bh;
+      var r = 0.35 + Math.pow(rnd(), 2.4) * 1.5;
+      var a = 0.10 + Math.pow(rnd(), 1.9) * 0.62;
+      var tinge = rnd();
+      var col = tinge > 0.86
+        ? "rgba(190,214,255," + a.toFixed(3) + ")"
+        : tinge > 0.72
+          ? "rgba(255,226,196," + a.toFixed(3) + ")"
+          : "rgba(240,246,255," + a.toFixed(3) + ")";
+      g.fillStyle = col;
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+
+    // a faint galactic band
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    var bandAng = rnd() * Math.PI;
+    g.translate(bw / 2, bh / 2);
+    g.rotate(bandAng);
+    var bg2 = g.createLinearGradient(0, -bh * 0.34, 0, bh * 0.34);
+    bg2.addColorStop(0, "rgba(120,150,220,0)");
+    bg2.addColorStop(0.5, "rgba(126,156,226,0.028)");
+    bg2.addColorStop(1, "rgba(120,150,220,0)");
+    g.fillStyle = bg2;
+    g.fillRect(-bw, -bh * 0.34, bw * 2, bh * 0.68);
+    g.restore();
+
+    bg = c;
+  }
+
+  // ---------- per-system animated bits ----------
+  var dust = [], paths = [], twinkle = [];
+
+  function buildDynamic(S) {
+    var rnd = mulberry32(S.seed ^ 0x27d4eb2f);
+
+    dust = [];
+    for (var i = 0; i < S.dustCount; i++) {
+      var a = S.coreR * (1.35 + Math.pow(rnd(), 0.7) * 4.6);
+      dust.push({
+        a: a,
+        e: rnd() * 0.22,
+        phase: rnd() * Math.PI * 2,
+        bob: rnd() * Math.PI * 2,
+        speed: (0.22 + rnd() * 0.55) * Math.pow((S.coreR * 3) / a, 1.4),
+        r: 0.45 + Math.pow(rnd(), 2.2) * 1.55,
+        al: 0.10 + rnd() * 0.34,
+        hueShift: rnd() * 40 - 20,
+        tilt: S.tilt * (0.5 + rnd())
+      });
+    }
+
+    paths = [];
+    for (var p = 0; p < S.planets.length; p++) {
+      var pl = S.planets[p];
+      var path = new Path2D();
+      var steps = 128;
+      for (var j = 0; j <= steps; j++) {
+        var th = (j / steps) * Math.PI * 2;
+        var rr = pl.a * (1 - pl.e * pl.e) / (1 + pl.e * Math.cos(th));
+        var x = Math.cos(th) * rr, y = Math.sin(th) * rr;
+        var ct = Math.cos(pl.orbitTilt), st = Math.sin(pl.orbitTilt);
+        var rx = x * ct - y * st, ry = x * st + y * ct;
+        if (j === 0) path.moveTo(rx, ry); else path.lineTo(rx, ry);
+      }
+      paths.push(path);
+    }
+
+    twinkle = [];
+    var tw = clamp(Math.round((W * H) / 26000), 18, 70);
+    var rt = mulberry32(S.seed ^ 0x1b56c4e9);
+    for (var k = 0; k < tw; k++) {
+      twinkle.push({
+        x: rt() * W, y: rt() * H,
+        r: 0.5 + rt() * 1.5,
+        ph: rt() * Math.PI * 2,
+        sp: 0.35 + rt() * 1.5
+      });
+    }
+  }
+
+  // ---------- state ----------
+  var S = null;
+  var t0 = performance.now();
+  var ignT = 0, IGN_DUR = 1150;
+  var px = 0, py = 0, tpx = 0, tpy = 0;
+  var pending = null;
+
+  function ignite(phrase, opts) {
+    opts = opts || {};
+    S = derive(phrase, W, H);
+    buildSprite(S);
+    buildBackground(S);
+    buildDynamic(S);
+    ignT = REDUCED ? 0 : IGN_DUR;
+    updateReadout(S);
+    if (opts.sync !== false) {
+      var h = "#" + encodeURIComponent(S.phrase);
+      if (location.hash !== h) {
+        try { history.replaceState(null, "", h); } catch (e) { location.hash = h; }
+      }
+    }
+  }
+
+  function updateReadout(S2) {
+    document.getElementById("roTitle").textContent = S2.phrase;
+    document.getElementById("roClass").textContent = spectralClass(S2.temp) + S2.subclass + " V";
+    document.getElementById("roTemp").textContent = Math.round(S2.temp / 10) * 10 + " K";
+    document.getElementById("roMass").textContent = S2.mass.toFixed(2) + " M☉";
+    document.getElementById("roWorlds").textContent = String(S2.worlds);
+    document.getElementById("roSeed").textContent = "0x" + S2.seed.toString(16).toUpperCase().padStart(8, "0");
+    var ro = document.getElementById("readout");
+    requestAnimationFrame(function () { ro.classList.add("on"); });
+  }
+
+  // ---------- drawing ----------
+  function drawPlanet(g, pl, x, y, t, behind) {
+    var size = pl.size;
+    // direction toward the star (origin)
+    var dx = -x, dy = -y;
+    var dl = Math.hypot(dx, dy) || 1;
+    dx /= dl; dy /= dl;
+
+    // glow
+    var glow = g.createRadialGradient(x, y, size * 0.5, x, y, size * 2.5);
+    glow.addColorStop(0, hsl(pl.tone, pl.pSat + 18, 62, 0.13));
+    glow.addColorStop(0.45, hsl(pl.tone, pl.pSat + 8, 54, 0.045));
+    glow.addColorStop(1, hsl(pl.tone, pl.pSat, 50, 0));
+    g.fillStyle = glow;
+    g.beginPath(); g.arc(x, y, size * 2.5, 0, Math.PI * 2); g.fill();
+
+    // body, lit from the star
+    var bx = x + dx * size * 0.46, by = y + dy * size * 0.46;
+    var body = g.createRadialGradient(bx, by, size * 0.05, x, y, size * 1.02);
+    body.addColorStop(0, hsl(pl.tone, pl.pSat * 0.55, pl.pLit + 32, 1));
+    body.addColorStop(0.42, hsl(pl.tone, pl.pSat * 0.9, pl.pLit + 12, 1));
+    body.addColorStop(0.78, hsl(pl.tone, pl.pSat + 4, Math.max(10, pl.pLit - 14), 1));
+    body.addColorStop(1, hsl(pl.tone, pl.pSat + 8, Math.max(6, pl.pLit - 26), 1));
+    g.fillStyle = body;
+    g.beginPath(); g.arc(x, y, size, 0, Math.PI * 2); g.fill();
+
+    // crisp limb
+    g.strokeStyle = hsl(pl.tone, pl.pSat - 4, pl.pLit + 34, 0.28);
+    g.lineWidth = Math.max(0.5, size * 0.055);
+    g.beginPath(); g.arc(x, y, size * 0.985, 0, Math.PI * 2); g.stroke();
+
+    // terminator
+    var tx = x - dx * size * 1.35, ty = y - dy * size * 1.35;
+    var term = g.createRadialGradient(tx, ty, 0, tx, ty, size * 2.3);
+    term.addColorStop(0, "rgba(2,4,10,0.80)");
+    term.addColorStop(0.40, "rgba(2,4,10,0.42)");
+    term.addColorStop(0.72, "rgba(2,4,10,0.13)");
+    term.addColorStop(1, "rgba(2,4,10,0)");
+    g.fillStyle = term;
+    g.beginPath(); g.arc(x, y, size, 0, Math.PI * 2); g.fill();
+
+    // ring
+    if (pl.ring) {
+      g.save();
+      g.translate(x, y);
+      g.rotate(pl.orbitTilt * 1.7 + 0.4);
+      g.scale(1, 0.26);
+      g.strokeStyle = hsl(pl.tone, pl.pSat * 0.8, 78, 0.34);
+      g.lineWidth = Math.max(0.8, size * 0.30);
+      g.beginPath(); g.arc(0, 0, size * 1.85, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = hsl(pl.tone, pl.pSat * 0.8, 88, 0.14);
+      g.lineWidth = Math.max(0.5, size * 0.55);
+      g.beginPath(); g.arc(0, 0, size * 2.4, 0, Math.PI * 2); g.stroke();
+      g.restore();
+    }
+  }
+
+  function frame(now) {
+    var t = ((now - t0) / 1000) * S.rm;
+
+    px += (tpx - px) * 0.05;
+    py += (tpy - py) * 0.05;
+
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+
+    // background with slow parallax
+    ctx.drawImage(bg, -PAD - px * 10, -PAD - py * 10, W + PAD * 2, H + PAD * 2);
+
+    // twinkling near stars
+    ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < twinkle.length; i++) {
+      var tw = twinkle[i];
+      var a = 0.18 + 0.5 * (0.5 + 0.5 * Math.sin(t * tw.sp + tw.ph));
+      ctx.fillStyle = "rgba(232,240,255," + a.toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.arc(tw.x - px * 14, tw.y - py * 14, tw.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    var sx = CX - px * 26, sy = CY - py * 26;
+
+    // ---- system space ----
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    // orbit paths
+    ctx.globalCompositeOperation = "source-over";
+    for (var p = 0; p < paths.length; p++) {
+      ctx.strokeStyle = "rgba(200,220,255,0.055)";
+      ctx.lineWidth = 0.85;
+      ctx.stroke(paths[p]);
+    }
+
+    // dust
+    ctx.globalCompositeOperation = "lighter";
+    for (var d = 0; d < dust.length; d++) {
+      var du = dust[d];
+      var th = du.phase + t * du.speed;
+      var rr = du.a * (1 - du.e * du.e) / (1 + du.e * Math.cos(th));
+      var x = Math.cos(th) * rr, y = Math.sin(th) * rr;
+      var ct = Math.cos(du.tilt), st = Math.sin(du.tilt);
+      var dx = x * ct - y * st, dy = x * st + y * ct;
+      var fl = 0.65 + 0.35 * Math.sin(t * 1.7 + du.bob);
+      var al = du.al * fl * clamp(1.6 - du.a / (S.coreR * 5.5), 0.1, 1);
+      ctx.fillStyle = hsl(S.hue + du.hueShift, S.sat, 82, al.toFixed(3));
+      ctx.beginPath(); ctx.arc(dx, dy, du.r, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // ---- star ----
+    var pulse = 1 + 0.016 * Math.sin(t * 0.85) + 0.007 * Math.sin(t * 2.31 + 1.7);
+    var half = spriteHalf * pulse;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.save();
+    ctx.rotate(t * 0.014);
+    ctx.drawImage(sprite, -half, -half, half * 2, half * 2);
+    ctx.restore();
+
+    // ---- planets, split by depth ----
+    ctx.globalCompositeOperation = "source-over";
+    var front = [], back = [];
+    for (var q = 0; q < S.planets.length; q++) {
+      var pl = S.planets[q];
+      var th2 = pl.phase + t * pl.speed;
+      var r2 = pl.a * (1 - pl.e * pl.e) / (1 + pl.e * Math.cos(th2));
+      var x2 = Math.cos(th2) * r2, y2 = Math.sin(th2) * r2;
+      var c2 = Math.cos(pl.orbitTilt), s2 = Math.sin(pl.orbitTilt);
+      var px2 = x2 * c2 - y2 * s2, py2 = x2 * s2 + y2 * c2;
+      var item = { pl: pl, x: px2, y: py2, z: Math.sin(th2) };
+      if (item.z < 0) back.push(item); else front.push(item);
+    }
+    for (var b = 0; b < back.length; b++) drawPlanet(ctx, back[b].pl, back[b].x, back[b].y, t, true);
+
+    ctx.restore();
+    ctx.save();
+    ctx.translate(sx, sy);
+    for (var f = 0; f < front.length; f++) drawPlanet(ctx, front[f].pl, front[f].x, front[f].y, t, false);
+    ctx.restore();
+
+    // ---- ignition burst ----
+    if (ignT > 0) {
+      ignT -= 16.7;
+      var prog = clamp(1 - ignT / IGN_DUR, 0, 1);
+      var ease = 1 - Math.pow(1 - prog, 3);
+      var rad = S.coreR * (0.7 + ease * 7.2);
+      var alpha = Math.pow(1 - prog, 2.1);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.translate(sx, sy);
+
+      var ring = ctx.createRadialGradient(0, 0, rad * 0.72, 0, 0, rad);
+      ring.addColorStop(0, hsl(S.hue, S.sat, 88, 0));
+      ring.addColorStop(0.72, hsl(S.hue, S.sat - 10, 92, 0.20 * alpha));
+      ring.addColorStop(1, hsl(S.hue, S.sat, 96, 0));
+      ctx.fillStyle = ring;
+      ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fill();
+
+      ctx.strokeStyle = hsl(S.hue, S.sat - 25, 97, 0.34 * alpha);
+      ctx.lineWidth = Math.max(1, S.coreR * 0.06 * (1 - prog));
+      ctx.beginPath(); ctx.arc(0, 0, rad * 0.94, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+
+      // whole-screen flash
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = hsl(S.hue, S.sat - 30, 96, 0.05 * alpha);
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- sizing ----------
+  var resizeTimer = null;
+  function size() {
+    DPR = clamp(window.devicePixelRatio || 1, 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    CX = W / 2;
+    CY = H * 0.455;
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    cv.style.width = W + "px";
+    cv.style.height = H + "px";
+  }
+
+  function rebuild() {
+    var phrase = S ? S.phrase : currentPhrase();
+    var keep = ignT;
+    ignite(phrase, { sync: false });
+    ignT = keep;
+  }
+
+  // ---------- input ----------
+  var input = document.getElementById("phrase");
+  var form = document.getElementById("forge");
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("on"); }, 1700);
+  }
+
+  function currentPhrase() {
+    return (input.value || "").trim() || "nova";
+  }
+
+  var debounceTimer = null;
+  input.addEventListener("input", function () {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function () {
+      ignite(currentPhrase(), { sync: true });
+    }, 380);
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    clearTimeout(debounceTimer);
+    ignite(currentPhrase(), { sync: true });
+    if (document.activeElement === input) input.blur();
+  });
+
+  var ADJ = ["silent", "crimson", "hollow", "iron", "velvet", "static", "gentle", "distant",
+    "burning", "paper", "chrome", "amber", "tidal", "narrow", "lucky", "quiet", "broken",
+    "frozen", "golden", "electric", "salt", "midnight", "wild", "second"];
+  var NOUN = ["harbor", "engine", "eclipse", "orchard", "signal", "cathedral", "meadow",
+    "lantern", "river", "machine", "garden", "comet", "address", "prism", "monsoon",
+    "orbit", "winter", "atlas", "verge", "cassette", "meridian", "anchor", "violet", "dawn"];
+
+  document.getElementById("dice").addEventListener("click", function () {
+    var p = ADJ[Math.floor(Math.random() * ADJ.length)] + " " + NOUN[Math.floor(Math.random() * NOUN.length)];
+    input.value = p;
+    ignite(p, { sync: true });
+  });
+
+  document.getElementById("share").addEventListener("click", function () {
+    var url = location.origin + location.pathname + "#" + encodeURIComponent(S.phrase);
+    var done = function () { toast("link copied"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () { fallbackCopy(url, done); });
+    } else {
+      fallbackCopy(url, done);
+    }
+  });
+
+  function fallbackCopy(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:-1000px;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { toast("copy failed"); }
+    document.body.removeChild(ta);
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "/" && document.activeElement !== input) {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    } else if (e.key === "Escape" && document.activeElement === input) {
+      input.blur();
+    } else if (e.key === "r" && (e.metaKey || e.ctrlKey) === false && document.activeElement !== input) {
+      // r = new random star (only when not typing)
+      document.getElementById("dice").click();
+    }
+  });
+
+  // respond to back/forward and manual hash edits
+  window.addEventListener("hashchange", function () {
+    var h = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+    if (!h.trim() || h === S.phrase) return;
+    input.value = h;
+    ignite(h, { sync: false });
+  });
+
+  // pointer parallax
+  window.addEventListener("pointermove", function (e) {
+    tpx = (e.clientX / W - 0.5) * 2;
+    tpy = (e.clientY / H - 0.5) * 2;
+  }, { passive: true });
+
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      size();
+      rebuild();
+    }, 180);
+  });
+
+  // ---------- boot ----------
+  function startPhrase() {
+    var h = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+    if (h && h.trim()) { input.value = h; return h; }
+    var fallback = "nova";
+    input.value = fallback;
+    return fallback;
+  }
+
+  size();
+  ignite(startPhrase(), { sync: false });
+  requestAnimationFrame(function (now) { t0 = now; requestAnimationFrame(frame); });
+
+  // expose a tiny hook for testing
+  window.__nova = function (phrase) { input.value = phrase; ignite(phrase, { sync: true }); };
+})();
+</script>
+</body>
+</html>

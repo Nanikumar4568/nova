@@ -1,0 +1,19 @@
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# local tooling
+node_modules/
+dist/
+build/
+.cache/
+
+# local preview artefacts
+*.local.png
